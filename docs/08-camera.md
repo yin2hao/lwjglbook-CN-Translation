@@ -1,232 +1,211 @@
-# 摄像机（Camera）
+# 第08章 摄像机（Camera）
 
-本章中我们将学习如何在渲染的三维场景中移动。该功能就像是有一台可以在三维世界中运动的摄像机，然而事实上摄像机就是描述该功能的术语。
+在本章中，我们将学习如何在渲染的3D场景中移动。这个功能就像拥有一个可以在3D世界中移动的摄像机，实际上这就是用来指代它的术语。
 
-但如果你尝试在OpenGL寻找摄像机功能，你会发现没有摄像机这个概念，换句话说，摄像机一直是固定在屏幕中心的以(0, 0, 0)为中心点的位置。
+你可以在[这里](https://github.com/lwjglgamedev/lwjglbook/tree/main/chapter-08)找到本章的完整源代码。
 
-因此，我们需要模拟出一个可以在三维空间中移动的摄像。但要怎么做呢？摄像机是不能移动的，因此我们必须要移动世界中的全部物体。换句话说，如果移动不了摄像机就移动整个世界。
+## 摄像机简介（Camera introduction）
 
-假设摄像机从(Cx, Cy, Cz)沿着Z轴移动到(Cx, Cy, Cz+dz)，从而靠近在(Ox, Oy, Oz)放置的物体。
+如果你尝试在OpenGL中搜索特定的摄像机函数，你会发现并没有摄像机的概念，或者说摄像机始终是固定的，位于屏幕中心的(0, 0, 0)位置。因此，我们将通过模拟来实现一个能够在3D场景中移动的摄像机。我们如何实现这一点呢？既然我们无法移动摄像机，那么我们必须同时移动3D空间中的所有对象。换句话说，如果我们不能移动摄像机，我们就移动整个世界。
 
-![摄像机运动](_static/08/camera_movement.png)
+假设我们希望将摄像机位置沿z轴从初始位置(Cx, Cy, Cz)移动到位置(Cx, Cy, Cz+dz)，以更接近位于坐标(Ox, Oy, Oz)的对象。
 
-我们实际上做的是将物体（在三维空间中的所有物体）按摄像机应移动的相反方向移动。其实物体就像是放在跑步机上一样向后退。
+![摄像机移动](_static/08/camera_movement.png)
 
-![实际的运动](_static/08/actual_movement.png)
+实际上，我们将做的是将对象（实际上是3D空间中的所有对象）向摄像机应该移动的相反方向移动。可以想象这些对象被放在跑步机上。
 
-摄像机可以沿着三个轴（X、Y和Z）移动，也可以绕着它们旋转（翻滚（Roll）、俯仰（Pitch）和偏航（Yaw））。
+![实际移动](_static/08/actual_movement.png)
 
-![翻滚、俯仰和偏航](_static/08/roll_pitch_yaw.png)
+摄像机可以沿三个轴（x、y和z）移动，也可以绕它们旋转（滚动、俯仰和偏航）。
 
-基本上要做的就是让移动和旋转应用于三维世界全部物体。那要怎么做呢？答案是应用另一种变换，该变换将所有物体的所有顶点按摄像机移动的相反方向平移，再根据摄像机的旋转来旋转它们。当然，这将用到另一个矩阵，即所谓的观察矩阵（View Matrix）来完成。这个矩阵首先进行平移，然后沿着轴线进行旋转。
+![滚动、俯仰和偏航](_static/08/roll_pitch_yaw.png)
 
-来看看如何构造这个矩阵。如果你想起变换一章（第6章），其中的变换方程如下所示：
+因此，基本上我们必须能够移动和旋转3D世界中的所有对象。我们将如何做到这一点？答案是通过应用另一个变换，将所有对象的所有顶点向摄像机移动的相反方向平移，并根据摄像机的旋转进行旋转。当然，这将通过另一个矩阵来完成，即所谓的**视图矩阵**（View Matrix）。这个矩阵将首先执行平移，然后沿轴旋转。
 
-$$
-\begin{array}{lcl}
-Transf & = & \lbrack 投影矩阵 \rbrack \cdot \lbrack 位移矩阵 \rbrack \cdot \lbrack  旋转矩阵 \rbrack \cdot \lbrack  缩放矩阵 \rbrack \\ 
- & = & \lbrack   投影矩阵 \rbrack  \cdot \lbrack  世界矩阵 \rbrack
-\end{array}
-$$
-
-观察矩阵应在应用投影矩阵之前应用，因此我们的方程应如下所示：
+让我们看看如何构造这个矩阵。如果你还记得变换章节，我们的变换方程是这样的：
 
 $$
 \begin{array}{lcl}
-Transf & = & \lbrack  投影矩阵 \rbrack \cdot \lbrack  观察矩阵 \rbrack \cdot \lbrack  位移矩阵 \rbrack \cdot \lbrack  旋转矩阵 \rbrack \cdot \lbrack 缩放矩阵 \rbrack \\
-  & = & \lbrack 投影矩阵 \rbrack \cdot \lbrack  观察矩阵 \rbrack \cdot \lbrack  世界矩阵 \rbrack 
+Transf & = & \lbrack ProjMatrix \rbrack \cdot \lbrack TranslationMatrix \rbrack \cdot \lbrack  RotationMatrix \rbrack \cdot \lbrack  ScaleMatrix \rbrack \\ 
+ & = & \lbrack   ProjMatrix \rbrack  \cdot \lbrack  WorldMatrix \rbrack
 \end{array}
 $$
 
-现在有三个矩阵了，我们应稍微思考一下这些矩阵的生命周期。在游戏运行时，投影矩阵应该不会有太多的变化，最坏的情况下，每次渲染可能改变一次。如果摄像机移动，则观察矩阵在每次渲染时可能改变一次。每渲染一个`GameItem`实例世界矩阵都会改变一次，一次每次渲染调用都会改变多次。
+视图矩阵应该在乘以投影矩阵之前应用，因此我们的方程现在应该是这样的：
 
-因此我们应该将多少矩阵传递到顶点着色器呢？你可能会看到一些代码，为三个矩阵分别定义一个Uniform，但理论上最有效的方法是将投影矩阵和观察矩阵组合，将其称为`pv`矩阵，并传递`world`和`pv`矩阵到着色器。这样，我们可以使用世界坐标，并可以避免一些额外的运算。
+$$
+\begin{array}{lcl}
+Transf & = & \lbrack  ProjMatrix \rbrack \cdot \lbrack  ViewMatrix \rbrack \cdot \lbrack  TranslationMatrix \rbrack \cdot \lbrack  RotationMatrix \rbrack \cdot \lbrack ScaleMatrix \rbrack \\
+  & = & \lbrack ProjMatrix \rbrack \cdot \lbrack  ViewMatrix \rbrack \cdot \lbrack  WorldMatrix \rbrack 
+\end{array}
+$$
 
-但实际上，最方便的方法是将观察矩阵与世界矩阵组合。为什么这样？因为要记住整个摄像机概念就是个骗局，我们所做的是移动整个世界来模拟摄像机的位移，并仅显示一小部分的三维世界。因此，如果直接处理世界坐标，可能会让远离原点的世界坐标遇到一些精度问题。如果在所谓的摄像机空间中处理，我们将处理的点虽然远离世界原点，但也靠近摄像机。可以将观察矩阵和世界矩阵组合的矩阵称为模型观察矩阵（Model View Matrix）。
+## 摄像机实现（Camera implementation）
 
-让我们开始修改代码以支持摄像机吧。先创建一个名为`Camera`的类，它将储存摄像机的位置与旋转状态。该类将提供设置位置或旋转状态的方法（`setPosition`或`setRotation`），或在当前状态下用偏移量更新这些值的方法（`movePosition`或`moveRotation`）。
+让我们开始修改代码以支持摄像机。首先，我们将创建一个名为`Camera`的新类，它将保存摄像机的位置和旋转状态以及其视图矩阵。该类的定义如下：
 
 ```java
-package org.lwjglb.engine.graph;
+package org.lwjglb.engine.scene;
 
-import org.joml.Vector3f;
+import org.joml.*;
 
 public class Camera {
 
-    private final Vector3f position;
-
-    private final Vector3f rotation;
+    private Vector3f direction;
+    private Vector3f position;
+    private Vector3f right;
+    private Vector2f rotation;
+    private Vector3f up;
+    private Matrix4f viewMatrix;
 
     public Camera() {
-        position = new Vector3f(0, 0, 0);
-        rotation = new Vector3f(0, 0, 0);
+        direction = new Vector3f();
+        right = new Vector3f();
+        up = new Vector3f();
+        position = new Vector3f();
+        viewMatrix = new Matrix4f();
+        rotation = new Vector2f();
     }
 
-    public Camera(Vector3f position, Vector3f rotation) {
-        this.position = position;
-        this.rotation = rotation;
+    public void addRotation(float x, float y) {
+        rotation.add(x, y);
+        recalculate();
     }
 
     public Vector3f getPosition() {
         return position;
     }
 
+    public Matrix4f getViewMatrix() {
+        return viewMatrix;
+    }
+
+    public void moveBackwards(float inc) {
+        viewMatrix.positiveZ(direction).negate().mul(inc);
+        position.sub(direction);
+        recalculate();
+    }
+
+    public void moveDown(float inc) {
+        viewMatrix.positiveY(up).mul(inc);
+        position.sub(up);
+        recalculate();
+    }
+
+    public void moveForward(float inc) {
+        viewMatrix.positiveZ(direction).negate().mul(inc);
+        position.add(direction);
+        recalculate();
+    }
+
+    public void moveLeft(float inc) {
+        viewMatrix.positiveX(right).mul(inc);
+        position.sub(right);
+        recalculate();
+    }
+
+    public void moveRight(float inc) {
+        viewMatrix.positiveX(right).mul(inc);
+        position.add(right);
+        recalculate();
+    }
+
+    public void moveUp(float inc) {
+        viewMatrix.positiveY(up).mul(inc);
+        position.add(up);
+        recalculate();
+    }
+
+    private void recalculate() {
+        viewMatrix.identity()
+                .rotateX(rotation.x)
+                .rotateY(rotation.y)
+                .translate(-position.x, -position.y, -position.z);
+    }
+
     public void setPosition(float x, float y, float z) {
-        position.x = x;
-        position.y = y;
-        position.z = z;
+        position.set(x, y, z);
+        recalculate();
     }
 
-    public void movePosition(float offsetX, float offsetY, float offsetZ) {
-        if ( offsetZ != 0 ) {
-            position.x += (float)Math.sin(Math.toRadians(rotation.y)) * -1.0f * offsetZ;
-            position.z += (float)Math.cos(Math.toRadians(rotation.y)) * offsetZ;
-        }
-        if ( offsetX != 0) {
-            position.x += (float)Math.sin(Math.toRadians(rotation.y - 90)) * -1.0f * offsetX;
-            position.z += (float)Math.cos(Math.toRadians(rotation.y - 90)) * offsetX;
-        }
-        position.y += offsetY;
-    }
-
-    public Vector3f getRotation() {
-        return rotation;
-    }
-
-    public void setRotation(float x, float y, float z) {
-        rotation.x = x;
-        rotation.y = y;
-        rotation.z = z;
-    }
-
-    public void moveRotation(float offsetX, float offsetY, float offsetZ) {
-        rotation.x += offsetX;
-        rotation.y += offsetY;
-        rotation.z += offsetZ;
+    public void setRotation(float x, float y) {
+        rotation.set(x, y);
+        recalculate();
     }
 }
 ```
 
-接下来在`Transformation`中，将定义一个新矩阵来储存观察矩阵。
+如你所见，除了旋转和位置外，我们还定义了一些向量来定义前进、上和右方向。这是因为我们正在实现一个自由空间移动摄像机，当我们旋转它时，如果我们想向前移动，我们只想移动到摄像机指向的位置，而不是预定义的轴。我们需要获取这些向量来计算下一个位置将放置在哪里。最后，摄像机的状态存储在一个4x4矩阵中，即视图矩阵，因此每当我们更改位置或旋转时都需要更新它。如你所见，在更新视图矩阵时，我们需要先进行旋转，然后进行平移。如果我们反过来做，我们将不会沿着摄像机位置旋转，而是沿着坐标原点旋转。
+
+`Camera`类还提供了在向前、向上或向右移动时更新位置的方法。在这些方法中，视图矩阵用于根据当前状态计算前进、上或右方法应该在哪里，并相应地增加位置。我们使用出色的JOML库来为我们进行这些计算，同时保持代码非常简单。
+
+## 使用摄像机（Using the Camera）
+
+我们将在`Scene`类中存储一个`Camera`实例，因此让我们进行更改：
 
 ```java
-private final Matrix4f viewMatrix;
-```
-
-我们要提供一个更新这个值的方法。与投影矩阵相似，这个矩阵对于渲染周期中渲染的所有物体都是相同的。
-
-```java
-public Matrix4f getViewMatrix(Camera camera) {
-    Vector3f cameraPos = camera.getPosition();
-    Vector3f rotation = camera.getRotation();
-
-    viewMatrix.identity();
-    // 首先进行旋转，使摄像机在其位置上旋转
-    viewMatrix.rotate((float)Math.toRadians(rotation.x), new Vector3f(1, 0, 0))
-        .rotate((float)Math.toRadians(rotation.y), new Vector3f(0, 1, 0));
-    // 然后做位移
-    viewMatrix.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
-    return viewMatrix;
+public class Scene {
+    ...
+    private Camera camera;
+    ...
+    public Scene(int width, int height) {
+        ...
+        camera = new Camera();
+    }
+    ...
+    public Camera getCamera() {
+        return camera;
+    }
+    ...
 }
 ```
 
-如你所见，我们首先需要做旋转，然后位移。如果操作顺序相反，我们将不会沿着摄像机位置旋转，而是沿着坐标原点旋转。请注意，在`Camera`类的`movePosition`方法中，我们不只是简单地增加摄像机位置的偏移量。我们还考虑了沿Y轴的旋转，也就是偏航，以便计算最终位置。如果只是通过偏移来增加摄像机的位置，摄像机就不会朝着它所朝向的方向移动。
-
-除了上述所说的，我们现在还没有得到一个可以完全自由移动的摄像机（例如，如果我们沿着X轴旋转，当向前移动时，摄像机不会在空间中向上或向下移动），这将在此后的章节中完成，因为这有点复杂。 
-
-最后，我们将移除之前的`getWorldMatrix`方法，并添加一个名为`getModelViewMatrix`的新方法。 
-
-```java
-public Matrix4f getModelViewMatrix(GameItem gameItem, Matrix4f viewMatrix) {
-    Vector3f rotation = gameItem.getRotation();
-    modelViewMatrix.set(viewMatrix).translate(gameItem.getPosition()).
-		rotateX((float)Math.toRadians(-rotation.x)).
-		rotateY((float)Math.toRadians(-rotation.y)).
-		rotateZ((float)Math.toRadians(-rotation.z)).
-			scale(gameItem.getScale());
-    return modelViewMatrix;
-}
-```
-
-每个`GameItem`实例都将调用一次`getModelViewMatrix`方法。
-
-`Renderer`类的`render`方法中，我们只需要根据摄像机的值，在投影矩阵更新之后更新观察矩阵。
-
-```java
-// 更新投影矩阵
-Matrix4f projectionMatrix = transformation.getProjectionMatrix(FOV, window.getWidth(), window.getHeight(), Z_NEAR, Z_FAR);
-shaderProgram.setUniform("projectionMatrix", projectionMatrix);
-
-// 更新观察矩阵
-Matrix4f viewMatrix = transformation.getViewMatrix(camera);
-
-shaderProgram.setUniform("texture_sampler", 0);
-// 渲染每个游戏项
-for(GameItem gameItem : gameItems) {
-    // 为该项设置模型观察矩阵
-    Matrix4f modelViewMatrix = transformation.getModelViewMatrix(gameItem, viewMatrix);
-    shaderProgram.setUniform("modelViewMatrix", modelViewMatrix);
-    // 渲染该游戏项的网格
-    gameItem.getMesh().render();
-}
-```
-
-这就是实现摄像机概念的基本代码，现在需要使用它。我们可以修改输入处理和更新摄像机的方式，将设置如下按键：
-
-* “A”和“D”键使摄像机左右（X轴）移动。
-* “W”和“S”键使摄像机前后（Z轴）移动。
-* “Z”和“X”键使摄像机上下（Y轴）移动。
-
-当鼠标按下右键时，我们将使用鼠标位置沿X和Y轴旋转摄像机。 
-
-如你所见，我们将首次使用鼠标，创建一个名为`MouseInput`的新类，该类将封装鼠标访问。该类代码如下所示：
+用鼠标控制摄像机会很好。为此，我们将创建一个新类来处理鼠标事件，以便我们可以使用它们来更新摄像机旋转。以下是该类的代码。
 
 ```java
 package org.lwjglb.engine;
 
-import org.joml.Vector2d;
 import org.joml.Vector2f;
+
 import static org.lwjgl.glfw.GLFW.*;
 
 public class MouseInput {
 
-    private final Vector2d previousPos;
+    private Vector2f currentPos;
+    private Vector2f displVec;
+    private boolean inWindow;
+    private boolean leftButtonPressed;
+    private Vector2f previousPos;
+    private boolean rightButtonPressed;
 
-    private final Vector2d currentPos;
-
-    private final Vector2f displVec;
-
-    private boolean inWindow = false;
-
-    private boolean leftButtonPressed = false;
-
-    private boolean rightButtonPressed = false;
-
-    public MouseInput() {
-        previousPos = new Vector2d(-1, -1);
-        currentPos = new Vector2d(0, 0);
+    public MouseInput(long windowHandle) {
+        previousPos = new Vector2f(-1, -1);
+        currentPos = new Vector2f();
         displVec = new Vector2f();
-    }
+        leftButtonPressed = false;
+        rightButtonPressed = false;
+        inWindow = false;
 
-    public void init(Window window) {
-        glfwSetCursorPosCallback(window.getWindowHandle(), (windowHandle, xpos, ypos) -> {
-            currentPos.x = xpos;
-            currentPos.y = ypos;
+        glfwSetCursorPosCallback(windowHandle, (handle, xpos, ypos) -> {
+            currentPos.x = (float) xpos;
+            currentPos.y = (float) ypos;
         });
-        glfwSetCursorEnterCallback(window.getWindowHandle(), (windowHandle, entered) -> {
-            inWindow = entered;
-        });
-        glfwSetMouseButtonCallback(window.getWindowHandle(), (windowHandle, button, action, mode) -> {
+        glfwSetCursorEnterCallback(windowHandle, (handle, entered) -> inWindow = entered);
+        glfwSetMouseButtonCallback(windowHandle, (handle, button, action, mode) -> {
             leftButtonPressed = button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS;
             rightButtonPressed = button == GLFW_MOUSE_BUTTON_2 && action == GLFW_PRESS;
         });
+    }
+
+    public Vector2f getCurrentPos() {
+        return currentPos;
     }
 
     public Vector2f getDisplVec() {
         return displVec;
     }
 
-    public void input(Window window) {
+    public void input() {
         displVec.x = 0;
         displVec.y = 0;
         if (previousPos.x > 0 && previousPos.y > 0 && inWindow) {
@@ -255,98 +234,142 @@ public class MouseInput {
 }
 ```
 
-`MouseInput`类提供了一个应在在初始化阶段调用的`init`方法，并注册一组回调以处理鼠标事件：
+`MouseInput`类在其构造函数中注册了一组回调来处理鼠标事件：
 
-* `glfwSetCursorPosCallback`：注册一个回调，该回调将在鼠标移动时被调用。
-* `glfwSetCursorEnterCallback`：注册一个回调，该回调将在鼠标进入窗口时被调用。即使鼠标不在窗口内，我们也会收到鼠标事件。我们使用这个回调来确认鼠标进入窗口。
-* `glfwSetMouseButtonCallback`：注册一个回调，该回调在按下鼠标按钮时被调用。
+* `glfwSetCursorPosCallback`：注册一个回调，当鼠标移动时调用。
+* `glfwSetCursorEnterCallback`：注册一个回调，当鼠标进入我们的窗口时调用。即使鼠标不在我们的窗口中，我们也会收到鼠标事件。我们使用此回调来跟踪鼠标何时在我们的窗口中。
+* `glfwSetMouseButtonCallback`：注册一个回调，当鼠标按钮被按下时调用。
 
-`MouseInput`类提供了一个`input`方法，在处理游戏输入时应调用该方法。该方法计算鼠标从上一个位置的位移，并将其存储到`Vector2f`类型的`displVec`变量中，以便游戏使用它。
+`MouseInput`类提供了一个`input`方法，应在处理游戏输入时调用。此方法计算鼠标从先前位置的位移并将其存储在`displVec`变量中，以便我们的游戏使用。
 
-`MouseInput`类将在`GameEngine`类中实例化，并且将作为参数传递给游戏实现的`init`和`update`方法（因此需要相应地更改`IGameLogic`接口）。 
-
-```java
-void input(Window window, MouseInput mouseInput);
-
-void update(float interval, MouseInput mouseInput);
-```
-
-鼠标输入将在`GameEngine`类的`input`方法中被处理，而最终的控制将交由游戏实现。
+`MouseInput`类将在我们的`Window`类中实例化，该类还将提供一个getter来返回其实例。
 
 ```java
-protected void input() {
-    mouseInput.input(window);
-    gameLogic.input(window, mouseInput);
+public class Window {
+    ...
+    private MouseInput mouseInput;
+    ...
+    public Window(String title, WindowOptions opts, Callable<Void> resizeFunc) {
+        ...
+        mouseInput = new MouseInput(windowHandle);
+    }
+    ...
+    public MouseInput getMouseInput() {
+        return mouseInput;
+    }
+    ...    
 }
 ```
 
-现在已经准备好修改`DummyGame`类来处理键盘和鼠标输入了。该类的输入方法如下所示：
+在`Engine`类中，我们将在处理常规输入时使用鼠标输入：
+```java
+public class Engine {
+    ...
+    private void run() {
+        ...
+            if (targetFps <= 0 || deltaFps >= 1) {
+                window.getMouseInput().input();
+                appLogic.input(window, scene, now - initialTime);
+            }
+        ...
+    }
+    ...
+}
+```
+
+现在我们可以修改顶点着色器以使用摄像机的视图矩阵，正如你可能猜到的，它将作为统一变量传递。
+
+```glsl
+#version 330
+
+layout (location=0) in vec3 position;
+layout (location=1) in vec2 texCoord;
+
+out vec2 outTextCoord;
+
+uniform mat4 projectionMatrix;
+uniform mat4 viewMatrix;
+uniform mat4 modelMatrix;
+
+void main()
+{
+    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+    outTextCoord = texCoord;
+}
+```
+
+因此，下一步是在`SceneRender`类中正确创建统一变量，并在每次`render`调用中更新其值：
 
 ```java
-@Override
-public void input(Window window, MouseInput mouseInput) {
-    cameraInc.set(0, 0, 0);
-    if (window.isKeyPressed(GLFW_KEY_W)) {
-        cameraInc.z = -1;
-    } else if (window.isKeyPressed(GLFW_KEY_S)) {
-        cameraInc.z = 1;
-    }
-    if (window.isKeyPressed(GLFW_KEY_A)) {
-        cameraInc.x = -1;
-    } else if (window.isKeyPressed(GLFW_KEY_D)) {
-        cameraInc.x = 1;
-    }
-    if (window.isKeyPressed(GLFW_KEY_Z)) {
-        cameraInc.y = -1;
-    } else if (window.isKeyPressed(GLFW_KEY_X)) {
-        cameraInc.y = 1;
+public class SceneRender {
+    ...
+    private void createUniforms() {
+        ...
+        uniformsMap.createUniform("viewMatrix");
+        ...
+    }    
+    ...
+    public void render(Scene scene) {
+        ...
+        uniformsMap.setUniform("projectionMatrix", scene.getProjection().getProjMatrix());
+        uniformsMap.setUniform("viewMatrix", scene.getCamera().getViewMatrix());
+        ...
     }
 }
 ```
 
-这只是更新一个名为`cameraInc`的`Vector3f`变量，它储存了摄像机应用的位移。
+就是这样，我们的基础代码支持摄像机的概念。现在我们需要使用它。我们可以更改处理输入和更新摄像机的方式。我们将设置以下控制：
 
-`DummyGame`类的`update`方法将根据处理的键盘和鼠标事件，修改摄像机的位置和旋转。
+* 按键“A”和“D”分别将摄像机向左和向右（x轴）移动。
+* 按键“W”和“S”分别将摄像机向前和向后（z轴）移动。
+* 按键“Z”和“X”分别将摄像机向上和向下（y轴）移动。
+
+当鼠标右键按下时，我们将使用鼠标位置绕x和y轴旋转摄像机。
+
+现在我们准备更新我们的`Main`类来处理键盘和鼠标输入。
 
 ```java
-@Override
-public void update(float interval, MouseInput mouseInput) {
-    // 更新摄像机位置
-    camera.movePosition(cameraInc.x * CAMERA_POS_STEP,
-        cameraInc.y * CAMERA_POS_STEP,
-        cameraInc.z * CAMERA_POS_STEP);
 
-    // 基于鼠标更新摄像机           
-    if (mouseInput.isRightButtonPressed()) {
-        Vector2f rotVec = mouseInput.getDisplVec();
-        camera.moveRotation(rotVec.x * MOUSE_SENSITIVITY, rotVec.y * MOUSE_SENSITIVITY, 0);
+public class Main implements IAppLogic {
+
+    private static final float MOUSE_SENSITIVITY = 0.1f;
+    private static final float MOVEMENT_SPEED = 0.005f;
+    ...
+
+    public static void main(String[] args) {
+        ...
+        Engine gameEng = new Engine("chapter-08", new Window.WindowOptions(), main);
+        ...
     }
+    ...
+    public void input(Window window, Scene scene, long diffTimeMillis) {
+        float move = diffTimeMillis * MOVEMENT_SPEED;
+        Camera camera = scene.getCamera();
+        if (window.isKeyPressed(GLFW_KEY_W)) {
+            camera.moveForward(move);
+        } else if (window.isKeyPressed(GLFW_KEY_S)) {
+            camera.moveBackwards(move);
+        }
+        if (window.isKeyPressed(GLFW_KEY_A)) {
+            camera.moveLeft(move);
+        } else if (window.isKeyPressed(GLFW_KEY_D)) {
+            camera.moveRight(move);
+        }
+        if (window.isKeyPressed(GLFW_KEY_UP)) {
+            camera.moveUp(move);
+        } else if (window.isKeyPressed(GLFW_KEY_DOWN)) {
+            camera.moveDown(move);
+        }
+
+        MouseInput mouseInput = window.getMouseInput();
+        if (mouseInput.isRightButtonPressed()) {
+            Vector2f displVec = mouseInput.getDisplVec();
+            camera.addRotation((float) Math.toRadians(-displVec.x * MOUSE_SENSITIVITY),
+                    (float) Math.toRadians(-displVec.y * MOUSE_SENSITIVITY));
+        }
+    }
+    ...
 }
 ```
 
-现在可以添加更多的立方体到世界中，缩放它们，将它们设置在特定位置，并使用新摄像机游玩。如你所见，所有的立方体共享相同的网格。
-
-```java
-GameItem gameItem1 = new GameItem(mesh);
-gameItem1.setScale(0.5f);
-gameItem1.setPosition(0, 0, -2);
-
-GameItem gameItem2 = new GameItem(mesh);
-gameItem2.setScale(0.5f);
-gameItem2.setPosition(0.5f, 0.5f, -2);
-
-GameItem gameItem3 = new GameItem(mesh);
-gameItem3.setScale(0.5f);
-gameItem3.setPosition(0, 0, -2.5f);
-
-GameItem gameItem4 = new GameItem(mesh);
-gameItem4.setScale(0.5f);
-
-gameItem4.setPosition(0.5f, 0, -2.5f);
-gameItems = new GameItem[]{gameItem1, gameItem2, gameItem3, gameItem4};
-```
-
-你会得到如下所示的结果。
-
-![立方体们](_static/08/cubes.png)
-
+[下一章](./09-loading-more-complex-models.md)

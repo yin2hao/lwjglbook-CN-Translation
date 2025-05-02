@@ -1,286 +1,432 @@
-# 游戏循环（The Game Loop）
+# 第02章 - 游戏循环（The Game Loop）
 
-在本章中，我们将通过创建游戏循环来开始开发游戏引擎。游戏循环是每个游戏的核心部分，它基本上是一个无休止的循环，负责周期地处理用户的输入、更新游戏状态和渲染图像到屏幕上。
+在本章中，我们将通过创建游戏循环开始开发我们的游戏引擎。游戏循环是每个游戏的核心组件。它基本上是一个无尽的循环，负责周期性地处理用户输入、更新游戏状态并渲染到屏幕上。
 
-下述代码片段展示了游戏循环的结构：
+你可以在[这里](https://github.com/lwjglgamedev/lwjglbook/tree/main/chapter-02)找到本章的完整源代码。
+
+## 基础（The basis）
+
+以下代码片段展示了游戏循环的结构：
 
 ```java
 while (keepOnRunning) {
-    handleInput();
-    updateGameState();
+    input();
+    update();
     render();
 }
 ```
 
-那么，这就完了吗？我们已经完成游戏循环了吗？显然还没有，上述代码中有很多缺陷。首先，游戏循环运行的速度将取决于运行它的计算机。如果计算机足够快，用户甚至看不到游戏中发生了什么。此外，这个游戏循环将消耗所有的计算机资源。
+`input`方法负责处理用户输入（按键、鼠标移动等）。`update`方法负责更新游戏状态（敌人位置、人工智能等），最后是`render`方法。那么，这就全部结束了吗？我们的游戏循环完成了吗？还没有。上述代码片段存在许多问题。首先，游戏循环运行的速度将根据运行的机器不同而不同。如果机器足够快，用户甚至无法看清楚游戏中发生了什么。而且，这样的游戏循环将耗尽所有的机器资源。
 
-因此，我们需要游戏循环独立于运行的计算机，尝试以恒定速率运行。假设我们希望游戏以每秒50帧（50 Frames Per Second，50 FPS）的恒定速率运行，那么游戏循环代码可能是这样的：
+首先，我们可能希望分别控制游戏状态更新和渲染到屏幕的周期。为什么要这样做？以恒定速率更新游戏状态更重要，尤其是如果我们使用了某种物理引擎。相反，如果渲染未能及时完成，处理游戏循环时渲染旧帧就毫无意义了。我们可以灵活地跳过某些帧。
+
+## 实现（Implementation）
+
+在检查游戏循环之前，让我们先创建一些支持类，这些类将构成引擎的核心。我们首先将创建一个接口来封装游戏逻辑。通过这样做，我们可以使我们的游戏引擎在不同章节之间可重用。该接口将包含初始化游戏资源（`init`）、处理用户输入（`input`）、更新游戏状态（`update`）和清理资源（`cleanup`）的方法。
 
 ```java
-double secsPerFrame = 1.0d / 50.0d;
+package org.lwjglb.engine;
 
-while (keepOnRunning) {
-    double now = getTime();
-    handleInput();
-    updateGameState();
-    render();
-    sleep(now + secsPerFrame – getTime());
+import org.lwjglb.engine.graph.Render;
+import org.lwjglb.engine.scene.Scene;
+
+public interface IAppLogic {
+
+    void cleanup();
+
+    void init(Window window, Scene scene, Render render);
+
+    void input(Window window, Scene scene, long diffTimeMillis);
+
+    void update(Window window, Scene scene, long diffTimeMillis);
 }
 ```
 
-这个游戏循环很简单，可以用于一些游戏，但是它也存在一些缺陷。首先，它假定我们的更新和渲染方法适合以50FPS（即`secsPerFrame`等于20毫秒）的速率更新。
+如你所见，有一些实例类尚未定义（`Window`、`Scene`和`Render`），以及一个名为`diffTimeMillis`的参数，它保存了这些方法调用之间经过的毫秒数。
 
-此外，我们的计算机可能会优先考虑暂停游戏循环运行一段时间，以运行其他的任务。因此，我们可能会在非常不稳定的时间周期更新游戏状态，这是不符合游戏物理的要求的。
-
-最后，线程休眠的时间精度仅仅只有0.1秒，所以即使我们的更新和渲染方法没有消耗时间，也不会以恒定的速率更新。所以，如你所见，问题没那么简单。
-
-在网上你可以找到大量的游戏循环的变种。在本书中，我们将用一个不太复杂的，在大多数情况下都能正常工作的方法。我们将用的方法通常被称为**定长游戏循环**（Fixed Step Game Loop）。
-
-首先，我们可能想要单独控制游戏状态被更新的周期和游戏被渲染到屏幕的周期。为什么要这么做？因为以恒定的速率更新游戏状态更为重要，特别是如果使用物理引擎。相反，如果渲染没有及时完成，在运行游戏循环时渲染旧帧也是没有意义的，我们可以灵活地跳过某些帧。
-
-让我们看看现在的游戏循环是什么样的：
+让我们从`Window`类开始。我们将在此类中封装所有对**GLFW**库的调用，以创建和管理窗口，其结构如下：
 
 ```java
-double secsPerUpdate = 1.0d / 30.0d;
-double previous = getTime();
-double steps = 0.0;
-while (true) {
-  double loopStartTime = getTime();
-  double elapsed = loopStartTime - previous;
-  previous = loopStartTime;
-  steps += elapsed;
+package org.lwjglb.engine;
 
-  handleInput();
+import org.lwjgl.glfw.GLFWVidMode;
+import org.lwjgl.system.MemoryUtil;
+import org.tinylog.Logger;
 
-  while (steps >= secsPerUpdate) {
-    updateGameState();
-    steps -= secsPerUpdate;
-  }
+import java.util.concurrent.Callable;
 
-  render();
-  sync(loopStartTime);
-}
-```
+import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
+import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.system.MemoryUtil.NULL;
 
-使用这个游戏循环，我们可以在固定的周期更新游戏状态。但是如何避免耗尽计算机资源，使它不连续渲染呢？这在`sync`方法中实现：
+public class Window {
 
-```java
-private void sync(double loopStartTime) {
-   float loopSlot = 1f / 50;
-   double endTime = loopStartTime + loopSlot; 
-   while(getTime() < endTime) {
-       try {
-           Thread.sleep(1);
-       } catch (InterruptedException ie) {}
-   }
-}
-```
-
-那么上述方法做了什么呢？简而言之，我们计算游戏循环迭代应该持续多长时间（它被储存在`loopSlot`变量中），休眠的时间取决于在循环中花费的时间。但我们不做一整段时间的休眠，而是进行一些小的休眠。这允许其他任务运行，并避免此前提到的休眠准确性问题。接下来我们要做的是：
-1. 计算应该退出这个方法的时间（这个变量名为`endTime`），并开始游戏循环的另一次迭代。
-2. 比较当前时间和结束时间，如果没有到达结束时间，就休眠1毫秒。
-
-现在是构建代码库以便开始编写游戏引擎的第一个版本的时候了。但在此之前，我们来讨论一下控制渲染速率的另一种方法。在上述代码中，我们做微休眠是为了控制需要等待的时间。但我们可以选择另一种方法来限制帧率。我们可以使用**垂直同步**（Vertical Synchronization），垂直同步的主要目的是避免画面撕裂。什么是画面撕裂？这是一种显示现象，当正在渲染时，我们更新图像储存区，导致屏幕的一部分显示先前的图像，而屏幕的另一部分显示正在渲染的图像。如果启用垂直同步，当GPU中的数据正被渲染到屏幕上时，我们不会向GPU发送数据。
-
-当开启垂直同步时，我们将与显卡的刷新率同步，显卡将以恒定的帧率渲染。用下述一行代码启用它：
-
-```java
-glfwSwapInterval(1);
-```
-
-有了上述代码，就意味着至少在一个屏幕更新被绘制到屏幕之前，我们必须等待。事实上我们不是直接绘制到屏幕上。相反，我们将数据储存在缓冲区中，然后用下面的方法交换它：
-
-```java
-glfwSwapBuffers(windowHandle);
-```
-
-因此，如果启用垂直同步，我们就可以实现稳定的帧率，而不需要进行微休眠来检查更新时间。此外，帧率将与设备的显卡刷新率相匹配，也就是说，如果它设定为60Hz（60FPS），那么我们就有60FPS。我们可以通过在`glfwSwapInterval`方法中设置高于1的数字来降低这个速率（如果设置为2，将得到30FPS）。
-
-让我们整理一下源代码。首先，我们将把所有的GLFW窗口初始化代码封装在一个名为`Window`的类中，传递一些基本的参数（如标题和大小）。`Window`类还提供一个方法以便在游戏循环中检测按下的按键：
-
-```java
-public boolean isKeyPressed(int keyCode) {
-    return glfwGetKey(windowHandle, keyCode) == GLFW_PRESS;
-}
-```
-
-除了有初始化代码以外，`Window`类还需要知道窗口大小被调整。因此需要设置一个回调方法，在窗口大小被调整时调用它。回调方法将接收帧缓冲区（渲染区域，简单来说就是显示区域）的以像素为单位的宽度和高度。如果希望得到帧缓冲区的宽度和高度，你可以使用`glfwSetWindowSizeCallback`方法。屏幕坐标不一定对应像素（例如，具有视网膜显示屏（Retina Display）的Mac设备）。因为我们将在进行OpenGL调用时使用这些信息，所以要注意像素不在屏幕坐标中，你可以通过GLFW的文档了解更多信息。
-
-```java
-// 设置调整大小回调
-glfwSetFramebufferSizeCallback(windowHandle, (window, width, height) -> {
-    Window.this.width = width;
-    Window.this.height = height;
-    Window.this.setResized(true);
-});
-```
-
-我们还将创建一个`Renderer`类，它将处理我们游戏的渲染。现在，它仅会有一个空的`init`方法，和另一个用预设颜色清空屏幕的方法：
-
-```java
-public void init() throws Exception {
-}
-
-public void clear() {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-}
-```
-
-然后我们将创建一个名为`IGameLogic`的接口，它封装了我们的游戏逻辑。这样，我们就可以让游戏引擎在不同的游戏上重复使用。该接口将具有获取输入、更新游戏状态和渲染游戏内容的方法。
-
-```java
-public interface IGameLogic {
-
-    void init() throws Exception;
-
-    void input(Window window);
-
-    void update(float interval);
-
-    void render(Window window);
-}
-```
-
-然后我们将创建一个名为`GameEngine`的类，它将包含我们游戏循环的代码，该类将实现储存游戏循环：
-
-```java
-public class GameEngine implements Runnable {
-
-    //...
-
-    public GameEngine(String windowTitle, int width, int height, boolean vSync, IGameLogic gameLogic) throws Exception {
-        window = new Window(windowTitle, width, height, vSync);
-        this.gameLogic = gameLogic;
-        //...
-    }
-```
-
-`vSync`参数允许我们选择是否启用垂直同步。你可以看到我们实现了`GameEngine`类的`run`方法，其中包括游戏循环：
-
-```java
-@Override
-public void run() {
-    try {
-        init();
-        gameLoop();
-    } catch (Exception excp) {
-        excp.printStackTrace();
+    private final long windowHandle;
+    private int height;
+    private Callable<Void> resizeFunc;
+    private int width;
+    ...
+    ...
+    public static class WindowOptions {
+        public boolean compatibleProfile;
+        public int fps;
+        public int height;
+        public int ups = Engine.TARGET_UPS;
+        public int width;
     }
 }
 ```
 
-`GameEngine`类提供了一个`run`方法，该方法将执行初始化任务，并运行游戏循环，直到我们关闭窗口。关于线程需要注意的一点是，GLFW需要从主线程初始化，事件的轮询也应该在该线程中完成。因此，我们将在主线程中执行所有内容，而不是为游戏循环创建单独的线程。
+如你所见，它定义了一些属性来存储窗口句柄、宽度和高度，以及在窗口大小改变时调用的回调函数。它还定义了一个内部类来设置一些用于控制窗口创建的选项：
 
-在源代码中，你将看到我们创建了其他辅助类，例如`Timer`（它将提供用于计算已经过的时间的实用方法），并在游戏循环逻辑中使用它们。
+* `compatibleProfile`：这控制我们是否希望使用旧版本中的函数（已弃用的函数）。
+* `fps`：定义目标帧率（FPS）。如果其值小于或等于零，则意味着我们不设置目标帧率，而是使用显示器的刷新率作为目标帧率。为了实现这一点，我们将使用垂直同步，也就是从调用`glfwSwapBuffers`起等待的屏幕刷新次数。
+* `height`：期望的窗口高度。
+* `width`：期望的窗口宽度。
+* `ups`：定义每秒更新次数的目标值（初始化为默认值）。
 
-`GameEngine`类只是将`input`和`update`方法委托给`IGameLogic`实例。在`render`方法中，它也委托给`IGameLogic`实例并更新窗口。
-
-```java
-protected void input() {
-    gameLogic.input(window);
-}
-
-protected void update(float interval) {
-    gameLogic.update(interval);
-}
-
-protected void render() {
-    gameLogic.render(window);
-    window.update();
-}
-```
-
-在程序的入口，含有`main`方法的类只会创建一个`GameEngine`实例并运行它。
+让我们来看一下`Window`类的构造方法：
 
 ```java
-public class Main {
-
-    public static void main(String[] args) {
-        try {
-            boolean vSync = true;
-            IGameLogic gameLogic = new DummyGame();
-            GameEngine gameEng = new GameEngine("GAME",
-                600, 480, vSync, gameLogic);
-            gameEng.run();
-        } catch (Exception excp) {
-            excp.printStackTrace();
-            System.exit(-1);
+public class Window {
+    ...
+    public Window(String title, WindowOptions opts, Callable<Void> resizeFunc) {
+        this.resizeFunc = resizeFunc;
+        if (!glfwInit()) {
+            throw new IllegalStateException("Unable to initialize GLFW");
         }
-    }
 
-}
-```
+        glfwDefaultWindowHints();
+        glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
 
-最后，在本章中我们只需要创建一个简单的游戏逻辑类。它只会在按下上或下键时，变亮或变暗窗口的颜色缓冲区的清空颜色，`render`方法将会用这个颜色清空窗口的颜色缓冲区。
-
-```java
-public class DummyGame implements IGameLogic {
-
-    private int direction = 0;
-
-    private float color = 0.0f;
-
-    private final Renderer renderer;
-
-    public DummyGame() {
-        renderer = new Renderer();
-    }
-
-    @Override
-    public void init() throws Exception {
-        renderer.init();
-    }
-
-    @Override
-    public void input(Window window) {
-        if (window.isKeyPressed(GLFW_KEY_UP)) {
-            direction = 1;
-        } else if (window.isKeyPressed(GLFW_KEY_DOWN)) {
-            direction = -1;
-        } else {
-            direction = 0;
-        }
-    }
-
-    @Override
-    public void update(float interval) {
-        color += direction * 0.01f;
-        if (color > 1) {
-            color = 1.0f;
-        } else if ( color < 0 ) {
-            color = 0.0f;
-        }
-    }
-
-    @Override
-    public void render(Window window) {
-        if (window.isResized()) {
-            glViewport(0, 0, window.getWidth(), window.getHeight());
-            window.setResized(false);
-        }
-        window.setClearColor(color, color, color, 0.0f);
-        renderer.clear();
-    }    
-}
-```
-
-在`render`方法中，当窗口大小被调整时，我们接收通知，以便更新视口将坐标中心定位到窗口的中心。
-
-创建的类层次结构将帮助我们将游戏引擎代码与具体的游戏代码分开。虽然现在可能看起来没有必要，但我们已将每个游戏的通用代码，从具体的游戏的逻辑、美术作品和资源中分离出来，以便重用游戏引擎。在此后的章节中，我们需要重构这个类层次结构，因为我们的游戏引擎变得更加复杂。
-
-## 平台差异（OSX）
-
-你可以运行上面的代码在Windows或Linux上，但我们仍需要为OS X平台做一些修改。正如GLFW文档中所描述的：
-
-> 目前OS X仅支持的OpenGL 3.x和4.x版本的环境是向上兼容的。OS X 10.7 Lion支持OpenGL 3.2版本和OS X 10.9 Mavericks支持OpenGL 3.3和4.1版本。在任何情况下，你的GPU需要支持指定版本的OpenGL，以成功创建环境。
-
-因此，为了支持在此后章节中介绍的特性，我们需要将下述代码添加到`Window`类创建窗口代码之前：
-
-```java
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+
+        //这个不重要
+        if (opts.compatibleProfile) {
+            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);//兼容模式
+        } else {
+            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);//核心模式
+            glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+        }
+
+        if (opts.width > 0 && opts.height > 0) {
+            this.width = opts.width;
+            this.height = opts.height;
+        } else {
+            glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+            GLFWVidMode vidMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+            width = vidMode.width();
+            height = vidMode.height();
+        }
+
+        windowHandle = glfwCreateWindow(width, height, title, NULL, NULL);
+        if (windowHandle == NULL) {
+            throw new RuntimeException("Failed to create the GLFW window");
+        }
+
+        //注册一个回调函数，当窗口的​帧缓冲区大小​（实际渲染区域）发生变化时（如窗口缩放、全屏切换），自动调用该函数
+        glfwSetFramebufferSizeCallback(windowHandle, (window, w, h) -> resized(w, h));
+
+        // ​​GLFW 错误回调的设置​​，用于捕获并处理 GLFW 库运行时的错误信息
+        //​​必须在 glfwInit() 之前设置​​，否则早期错误（如库加载失败）无法被捕获
+        glfwSetErrorCallback((int errorCode, long msgPtr) ->
+                Logger.error("Error code [{}], msg [{}]", errorCode, MemoryUtil.memUTF8(msgPtr))
+        );
+
+        //按键回调，此处监听ESC按键
+        glfwSetKeyCallback(windowHandle, (window, key, scancode, action, mods) -> {
+            keyCallBack(key, action);
+        });
+
+        //绑定上下文
+        glfwMakeContextCurrent(windowHandle);
+
+        if (opts.fps > 0) {
+            glfwSwapInterval(0);
+        } else {
+            glfwSwapInterval(1);
+        }
+
+        glfwShowWindow(windowHandle);
+
+        int[] arrWidth = new int[1];
+        int[] arrHeight = new int[1];
+        glfwGetFramebufferSize(windowHandle, arrWidth, arrHeight);
+        width = arrWidth[0];
+        height = arrHeight[0];
+    }
+    ...
+    public void keyCallBack(int key, int action) {
+        if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
+            glfwSetWindowShouldClose(windowHandle, true); // 我们将在渲染循环中检测到这一点
+        }
+    }
+    ...
+}
 ```
 
-这将使程序使用OpenGL 3.2到4.1之间的最高版本。如果没有上述代码，就会使用旧版本的OpenGL。
+??? note "为什么arrWidth，arrHeight要用数组"
+    ​GLFW 的 C 语言设计​​：
+    GLFW 是 C 库，通过指针参数返回多个值（类似 void glfwGetFramebufferSize  ..., int* width, int* height）。
+
+
+我们首先设置一些窗口提示来隐藏窗口并设置为可调整大小。之后，我们设置OpenGL版本，并根据窗口选项选择核心或兼容配置文件。然后，如果没有设置首选宽度和高度，我们获取主显示器的尺寸来设置窗口大小。随后，我们通过调用`glfwCreateWindow`创建窗口，并在窗口大小改变或检测到窗口终止（按下`ESC`键）时设置回调函数。如果我们想手动设置目标FPS，则调用`glfwSwapInterval(0)`来禁用垂直同步（Vertical Synchronization），最后显示窗口并获取帧缓冲区大小（用于渲染的窗口部分）。
+
+`Window`类的其余方法用于清理资源、处理窗口大小调整回调、获取窗口大小的getter方法，以及轮询事件和检查窗口是否应关闭的方法。
+
+```java
+public class Window {
+    ...
+    public void cleanup() {
+        glfwFreeCallbacks(windowHandle);
+        glfwDestroyWindow(windowHandle);
+        glfwTerminate();
+        GLFWErrorCallback callback = glfwSetErrorCallback(null);
+        if (callback != null) {
+            callback.free();
+        }
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public long getWindowHandle() {
+        return windowHandle;
+    }
+    
+    public boolean isKeyPressed(int keyCode) {
+        return glfwGetKey(windowHandle, keyCode) == GLFW_PRESS;
+    }
+
+    public void pollEvents() {
+        glfwPollEvents();
+    }
+
+    protected void resized(int width, int height) {
+        this.width = width;
+        this.height = height;
+        try {
+            resizeFunc.call();
+        } catch (Exception excp) {
+            Logger.error("Error calling resize callback", excp);
+        }
+    }
+
+    public void update() {
+        glfwSwapBuffers(windowHandle);
+    }
+
+    public boolean windowShouldClose() {
+        return glfwWindowShouldClose(windowHandle);
+    }
+    ...
+}
+```
+
+`Scene`类将用于保存未来3D场景元素（模型等）。目前，它只是一个空的占位符：
+
+```java
+package org.lwjglb.engine.scene;
+
+public class Scene {
+
+    public Scene() {
+    }
+
+    public void cleanup() {
+        // 目前这里无需做任何处理
+    }
+}
+```
+
+`Render`类现在也是一个占位符，只是清除屏幕：
+
+```java
+package org.lwjglb.engine.graph;
+
+import org.lwjgl.opengl.GL;
+import org.lwjglb.engine.Window;
+import org.lwjglb.engine.scene.Scene;
+
+import static org.lwjgl.opengl.GL11.*;
+
+public class Render {
+
+    public Render() {
+        GL.createCapabilities();
+    }
+
+    public void cleanup() {
+        // 目前这里无需做任何处理
+    }
+
+    public void render(Window window, Scene scene) {
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+}
+```
+
+现在，我们可以在一个名为`Engine`的新类中实现游戏循环，内容如下：
+
+```java
+package org.lwjglb.engine;
+
+import org.lwjglb.engine.graph.Render;
+import org.lwjglb.engine.scene.Scene;
+
+public class Engine {
+
+    public static final int TARGET_UPS = 30;
+    private final IAppLogic appLogic;
+    private final Window window;
+    private Render render;
+    private boolean running;
+    private Scene scene;
+    private int targetFps;
+    private int targetUps;
+
+    public Engine(String windowTitle, Window.WindowOptions opts, IAppLogic appLogic) {
+        window = new Window(windowTitle, opts, () -> {
+            resize();
+            return null;
+        });
+        targetFps = opts.fps;
+        targetUps = opts.ups;
+        this.appLogic = appLogic;
+        render = new Render();
+        scene = new Scene();
+        appLogic.init(window, scene, render);
+        running = true;
+    }
+
+    private void cleanup() {
+        appLogic.cleanup();
+        render.cleanup();
+        scene.cleanup();
+        window.cleanup();
+    }
+
+    private void resize() {
+        // 目前这里无需做任何处理
+    }
+    ...
+}
+```
+
+`Engine`类在构造函数中接收窗口标题、窗口选项以及`IAppLogic`接口的实现引用。在构造函数中，它创建了`Window`、`Render`和`Scene`类的实例。`cleanup`方法只是调用其他类的清理资源方法。游戏循环在`run`方法中定义，其内容如下：
+
+```java
+public class Engine {
+    ...
+    private void run() {
+        long initialTime = System.currentTimeMillis();
+        float timeU = 1000.0f / targetUps;
+        float timeR = targetFps > 0 ? 1000.0f / targetFps : 0;
+        float deltaUpdate = 0;
+        float deltaFps = 0;
+
+        long updateTime = initialTime;
+        while (running && !window.windowShouldClose()) {
+            window.pollEvents();
+
+            long now = System.currentTimeMillis();
+            deltaUpdate += (now - initialTime) / timeU;
+            deltaFps += (now - initialTime) / timeR;
+
+            if (targetFps <= 0 || deltaFps >= 1) {
+                appLogic.input(window, scene, now - initialTime);
+            }
+
+            if (deltaUpdate >= 1) {
+                long diffTimeMillis = now - updateTime;
+                appLogic.update(window, scene, diffTimeMillis);
+                updateTime = now;
+                deltaUpdate--;
+            }
+
+            if (targetFps <= 0 || deltaFps >= 1) {
+                render.render(window, scene);
+                deltaFps--;
+                window.update();
+            }
+            initialTime = now;
+        }
+
+        cleanup();
+    }
+    ...
+}
+```
+
+循环开始时计算两个参数：`timeU`和`timeR`，它们分别控制更新（`timeU`）和渲染（`timeR`）调用之间的最大时间间隔（以毫秒为单位）。如果这些时间间隔被消耗完，我们就需要更新游戏状态或进行渲染。如果目标FPS设置为0，我们将依赖于垂直同步（Vertical Synchronization）刷新率，因此将该值设为`0`。循环开始时轮询窗口事件，之后获取当前时间（以毫秒为单位）。然后计算自上次更新和渲染调用以来的时间差。如果超过了渲染最大时间间隔（或依赖于垂直同步），则调用`appLogic.input`处理用户输入。如果超过了更新最大时间间隔，则调用`appLogic.update`更新游戏状态。如果又超过了渲染最大时间间隔（或依赖于垂直同步），则调用`render.render`进行渲染。
+
+循环结束时调用`cleanup`方法释放资源。
+
+最后，`Engine`类完成如下：
+
+```java
+public class Engine {
+    ...
+    public void start() {
+        running = true;
+        run();
+    }
+
+    public void stop() {
+        running = false;
+    }
+}
+```
+
+关于线程的简要说明。GLFW要求从主线程进行初始化。事件轮询也应该在主线程中进行。因此，与通常在游戏中会看到创建单独线程运行游戏循环的方式不同，我们将所有内容都在主线程中执行。这就是为什么我们在`start`方法中没有创建新`Thread`的原因。
+
+最后，我们将`Main`类简化为如下内容：
+
+```java
+package org.lwjglb.game;
+
+import org.lwjglb.engine.*;
+import org.lwjglb.engine.graph.Render;
+import org.lwjglb.engine.scene.Scene;
+
+public class Main implements IAppLogic {
+
+    public static void main(String[] args) {
+        Main main = new Main();
+        Engine gameEng = new Engine("chapter-02", new Window.WindowOptions(), main);
+        gameEng.start();
+    }
+
+    @Override
+    public void cleanup() {
+        // 目前这里无需做任何处理
+    }
+
+    @Override
+    public void init(Window window, Scene scene, Render render) {
+        // 目前这里无需做任何处理
+    }
+
+    @Override
+    public void input(Window window, Scene scene, long diffTimeMillis) {
+        // 目前这里无需做任何处理
+    }
+
+    @Override
+    public void update(Window window, Scene scene, long diffTimeMillis) {
+        // 目前这里无需做任何处理
+    }
+}
+```
+
+我们只需在`main`方法中创建`Engine`实例并启动它。`Main`类还实现了`IAppLogic`接口，目前接口方法都为空。
+
+[下一章](./03-our-first-triangle.md)

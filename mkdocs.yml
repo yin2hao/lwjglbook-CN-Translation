@@ -1,50 +1,60 @@
 nav:
-- 事前准备: 01-first-steps.md
-- 游戏循环: 02-the-game-loop.md
-- 坐标简介: 03-a-brief-about-coordinates.md
-- 渲染: 04-rendering.md
-- 渲染补充: 05-more-on-rendering.md
-- 变换: 06-transformations.md
-- 纹理: 07-textures.md
-- 摄像机: 08-camera.md
-- 加载更复杂的模型: 09-loading-more-complex-models.md
-- 要有光: 10-let-there-be-light.md
-- 要有更多的光: 11-let-there-be-even-more-light.md
-- 游戏HUD: 12-game-hud.md
-- 天空盒与一些优化: 13-sky-box-and-some-optimizations.md
-- 高度图: 14-height-maps.md
-- 地形碰撞: 15-terrain-collisions.md
-- 雾: 16-fog.md
-- 法线贴图: 17-normal-mapping.md
-- 阴影: 18-shadows.md
-- 动画: 19-animations.md
-- 粒子: 20-particles.md
-- 实例化渲染: 21-instanced-rendering.md
-- 音效: 22-audio.md
-- 三维物体选取: 23-3d-object-picking.md
-- 回顾HUD - NanoVG: 24-hud-revisited.md
-- 优化 - 截锥剔除: 25-optimizations-frustum-culling.md
-- 级联阴影映射: 26-cascaded-shadow-maps.md
-- Assimp库: 27-assimp.md
-- 延迟着色法: 28-deferred-shading.md
-- 附录 A - OpenGL调试: a01-opengl-debugging.md
-- 术语表: glossary.md
+  # - 原仓库说明: 00-before-the-beginning
+  - 事前准备: 01-first-steps.md
+  - 游戏循环: 02-the-game-loop.md
+  - 我们的第一个三角形: 03-our-first-triangle.md
+  - 渲染: 04-more-on-render.md
+  - 透视投影: 05-perspective-projection.md
+  - 进入三维世界: 06-going-3D.md
+  - 纹理: 07-textures.md
+  - 摄像机: 08-camera.md
+  - 加载更复杂的模型: 09-loading-more-complex-models.md
+  - GUI: 10-GUI.md
+  - ERROR: 11-ERROR.md
+  - 天空盒与一些优化: 12-sky-box.md
+  - 雾: 13-fog.md
+  - 法线贴图: 14-normal-mapping.md
+  - 动画: 15-animations.md
+  - 音效: 16-audio.md
+  - 阴影: 17-shadows.md
+  - 三维物体选取: 18-3D-object-picking.md
+  - 延迟着色法: 19-deferred-shading.md
+  - 实例化渲染: 20-indirect-drawing.md
+  - 间接绘制计算着色器: 21-indirect-drawing-and-copute-shaders.md
+  - 附录 A - OpenGL调试: appendix-a.md
+  # - 术语表: glossary.md
 
-site_name: Lwjglbook中文翻译
+site_name: Lwjglbook中文翻译-笔记
 site_author: Mouse0w0
-copyright: 2019, Mouse0w0
+copyright: 2025, yin2hao
 
-repo_url: https://github.com/Mouse0w0/lwjglbook-CN-Translation
+repo_url: https://github.com/yin2hao/lwjglbook-CN-Translation
 remote_branch: pages
 
-theme: readthedocs
+theme:
+  name: material
+  icon:
+    annotation: material/plus-circle-outline
+    admonition:
+      note: octicons/tag-16
+  features:
+    - content.code.copy
+    - content.code.annotate
+    - content.code.select
 
-extra_javascript:
-  - https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML
+# extra_javascript:
+#   - https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML
 
 markdown_extensions:
   - admonition
-  - extra
-  - toc
-  - mdx_math:
-      enable_dollar_delimiter: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.critic

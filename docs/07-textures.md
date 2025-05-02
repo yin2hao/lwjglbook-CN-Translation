@@ -1,114 +1,24 @@
-# 纹理（Textures）
+# 第7章 纹理（Textures）
 
-## 创建一个三维立方体
+本章我们将学习如何加载纹理、纹理与模型的关联方式以及在渲染过程中如何使用纹理。
 
-在本章中，我们将学习如何在渲染中加载纹理并使用它们。为了讲解与纹理相关的所有概念，我们将把此前章节中使用的正方形更改为三维立方体。为了绘制一个立方体，我们只需要正确地定义一个立方体的坐标，就能使用现有代码正确地绘制它。
+你可以在[此处](https://github.com/lwjglgamedev/lwjglbook/tree/main/chapter-07)找到本章的完整源代码。
 
-为了绘制立方体，我们只需要定义八个顶点。
+## 纹理加载（Texture loading）
 
-![立方体坐标](_static/07/cube_coords.png)
-
-因此，它的坐标数组将是这样的：
-
-```java
-float[] positions = new float[] {
-    // VO
-    -0.5f,  0.5f,  0.5f,
-    // V1
-    -0.5f, -0.5f,  0.5f,
-    // V2
-    0.5f, -0.5f,  0.5f,
-    // V3
-     0.5f,  0.5f,  0.5f,
-    // V4
-    -0.5f,  0.5f, -0.5f,
-    // V5
-     0.5f,  0.5f, -0.5f,
-    // V6
-    -0.5f, -0.5f, -0.5f,
-    // V7
-     0.5f, -0.5f, -0.5f,
-};
-```
-
-当然，由于我们多了4个顶点，我们需要更改颜色数组，目前仅重复前四项的值。
-
-```java
-float[] colours = new float[]{
-    0.5f, 0.0f, 0.0f,
-    0.0f, 0.5f, 0.0f,
-    0.0f, 0.0f, 0.5f,
-    0.0f, 0.5f, 0.5f,
-    0.5f, 0.0f, 0.0f,
-    0.0f, 0.5f, 0.0f,
-    0.0f, 0.0f, 0.5f,
-    0.0f, 0.5f, 0.5f,
-};
-```
-
-最后，由于立方体是由六个面构成的，需要绘制十二个三角形（每个面两个），因此我们需要修改索引数组。记住三角形必须按逆时针顺序定义，如果你直接去定义三角形，很容易犯错。一定要将你想定义的面摆在你的面前，确认顶点并以逆时针顺序绘制三角形。
-
-```java
-int[] indices = new int[] {
-    // 前面
-    0, 1, 3, 3, 1, 2,
-    // 上面
-    4, 0, 3, 5, 4, 3,
-    // 右面
-    3, 2, 7, 5, 3, 7,
-    // 左面
-    6, 1, 0, 6, 0, 4,
-    // 下面
-    2, 1, 6, 2, 6, 7,
-    // 后面
-    7, 6, 4, 7, 4, 5,
-};
-```
-
-为了更好观察立方体，我们将修改`DummyGame`类中旋转模型的代码，使模型沿着三个轴旋转。
-
-```java
-// 更新旋转角
-float rotation = gameItem.getRotation().x + 1.5f;
-if ( rotation > 360 ) {
-    rotation = 0;
-}
-gameItem.setRotation(rotation, rotation, rotation);
-```
-
-这就完了，现在能够显示一个旋转的三维立方体了，你可以编译和运行示例代码，会得到如下所示的东西。
-
-![没有开启深度测试的立方体](_static/07/cube_no_depth_test.png)
-
-这个立方体有些奇怪，有些面没被正确地绘制，这发生了什么？立方体之所以出现这个现象，是因为组成立方体的三角形是以一种随机顺序绘制的。事实上距离较远的像素应该在距离较近的像素之前绘制，而不是现在这样。为了修复它，我们必须启用深度测试（Depth Test）。
-
-这将在`Window`类的`init`方法中去做：
-
-```java
-glEnable(GL_DEPTH_TEST);
-```
-
-现在立方体被正确地渲染了！
-
-![开启深度测试的立方体](_static/07/cube_depth_test.png)
-
-如果你看了本章该小节的代码，你可能会看到`Mesh`类做了一下小规模的调整，VBO的ID现在被储存在一个List中，以便于迭代它们。
-
-## 为立方体添加纹理
-
-现在我们将把纹理应用到立方体上。纹理（Texture）是用来绘制某个模型的像素颜色的图像，可以认为纹理是包在三维模型上的皮肤。你要做的是将纹理图像中的点分配给模型中的顶点，这样做OpenGL就能根据纹理图像计算其他像素的颜色。
+纹理是一幅映射到模型上用于设置模型像素颜色的图像。你可以将纹理视为包裹在3D模型表面的"皮肤"。具体做法是将图像纹理中的坐标点分配给模型顶点。通过这些信息，OpenGL能够基于纹理图像计算出其他像素应应用的颜色。
 
 ![纹理映射](_static/07/texture_mapping.png)
 
-纹理图像不必与模型同样大小，它可以变大或变小。如果要处理的像素不能映射到纹理中的指定点，OpenGL将推断颜色。可在创建纹理时控制如何进行颜色推断。
+纹理图像不必与模型尺寸相同，它可以更大或更小。当绘制的像素无法直接对应到特定纹理坐标点时，OpenGL会通过插值计算颜色。我们可以在创建特定纹理时控制这一过程。
 
-因此，为了将纹理应用到模型上，我们必须做的是将纹理坐标分配给每个顶点。纹理坐标系有些不同于模型坐标系。首先，我们的纹理是二维纹理，所以坐标只有X和Y两个量。此外，原点是图像的左上角，X或Y的最大值都是1。
+要为模型应用纹理，我们需要为每个顶点分配纹理坐标。纹理坐标系与模型坐标系有所不同：首先，纹理是二维的，因此坐标只有x和y两个分量；其次，坐标系原点位于图像左上角，x或y的最大值为1。
 
-![纹理坐标系](_static/07/texture_coordinates.png)
+![纹理坐标](_static/07/texture_coordinates.png)
 
-我们如何将纹理坐标与位置坐标联系起来呢？答案很简单，就像传递颜色信息，我们创建了一个VBO，为每个顶点储存其纹理坐标。
+如何将纹理坐标与位置坐标关联？很简单，就像传递颜色信息一样——我们设置一个VBO，其中包含每个顶点位置对应的纹理坐标。
 
-让我们开始修改代码，以便在三维立方体上使用纹理吧。首先是加载将被用作纹理的图像。对此在LWJGL的早期版本中，通常使用Slick2D库。在撰写本文时，该库似乎与LWJGL 3不兼容，因此我们需要使用另一种方法。我们将使用LWJGL为[stb](https://github.com/nothings/stb)库提供的封装。为了使用它，首先需要在本地的`pom.xml`文件中声明依赖。
+让我们开始修改代码库，为3D立方体添加纹理支持。第一步是加载用作纹理的图像。为此，我们将使用LWJGL封装的[stb](https://github.com/nothings/stb)库。首先需要在`pom.xml`文件中声明该依赖：
 
 ```xml
 <dependency>
@@ -126,240 +36,488 @@ glEnable(GL_DEPTH_TEST);
 </dependency>
 ```
 
-在一些教程中，你可能看到首先要做的事是调用`glEnable(GL_TEXTURE_2D)`来启用OpenGL环境中的纹理。如果使用固定管线这是对的，但我们使用GLSL着色器，因此不再需要了。
-
-现在我们将创建一个新的`Texture`类，它将执行加载纹理所必须的步骤。首先，我们需要将图像载入到`ByteBuffer`中，代码如下：
+首先创建一个新的`Texture`类，用于执行加载纹理所需的所有步骤：
 
 ```java
-private static int loadTexture(String fileName) throws Exception {
-    int width;
-    int height;
-    ByteBuffer buf;
-    // 加载纹理文件
-    try (MemoryStack stack = MemoryStack.stackPush()) {
-        IntBuffer w = stack.mallocInt(1);
-        IntBuffer h = stack.mallocInt(1);
-        IntBuffer channels = stack.mallocInt(1);
+package org.lwjglb.engine.graph;
 
-        buf = stbi_load(fileName, w, h, channels, 4);
-        if (buf == null) {
-            throw new Exception("Image file [" + fileName  + "] not loaded: " + stbi_failure_reason());
+import org.lwjgl.system.MemoryStack;
+import java.nio.*;
+import static org.lwjgl.opengl.GL30.*;
+import static org.lwjgl.stb.STBImage.*;
+
+public class Texture {
+    private int textureId;
+    private String texturePath;
+
+    public Texture(int width, int height, ByteBuffer buf) {
+        this.texturePath = "";
+        generateTexture(width, height, buf);
+    }
+
+    public Texture(String texturePath) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            this.texturePath = texturePath;
+            IntBuffer w = stack.mallocInt(1);
+            IntBuffer h = stack.mallocInt(1);
+            IntBuffer channels = stack.mallocInt(1);
+
+            ByteBuffer buf = stbi_load(texturePath, w, h, channels, 4);
+            if (buf == null) {
+                throw new RuntimeException("Image file [" + texturePath + "] not loaded: " + stbi_failure_reason());
+            }
+
+            int width = w.get();
+            int height = h.get();
+
+            generateTexture(width, height, buf);
+
+            stbi_image_free(buf);
         }
+    }
+
+    public void bind() {
+        glBindTexture(GL_TEXTURE_2D, textureId);
+    }
+
+    public void cleanup() {
+        glDeleteTextures(textureId);
+    }
+
+    private void generateTexture(int width, int height, ByteBuffer buf) {
+        textureId = glGenTextures();
+
+        glBindTexture(GL_TEXTURE_2D, textureId);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+                GL_RGBA, GL_UNSIGNED_BYTE, buf);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+
+    public String getTexturePath() {
+        return texturePath;
+    }
+}
+```
+
+接下来我们创建纹理缓存。由于模型经常重用相同纹理，为避免重复加载，我们将已加载的纹理缓存起来。这由`TextureCache`类控制：
+
+```java
+package org.lwjglb.engine.graph;
+
+import java.util.*;
+
+public class TextureCache {
+    public static final String DEFAULT_TEXTURE = "resources/models/default/default_texture.png";
+
+    private Map<String, Texture> textureMap;
+
+    public TextureCache() {
+        textureMap = new HashMap<>();
+        textureMap.put(DEFAULT_TEXTURE, new Texture(DEFAULT_TEXTURE));
+    }
+
+    public void cleanup() {
+        textureMap.values().forEach(Texture::cleanup);
+    }
+
+    public Texture createTexture(String texturePath) {
+        return textureMap.computeIfAbsent(texturePath, Texture::new);
+    }
+
+    public Texture getTexture(String texturePath) {
+        Texture texture = null;
+        if (texturePath != null) {
+            texture = textureMap.get(texturePath);
+        }
+        if (texture == null) {
+            texture = textureMap.get(DEFAULT_TEXTURE);
+        }
+        return texture;
+    }
+}
+```
+
+现在我们需要修改模型定义方式以支持纹理。为此，并准备加载更复杂的模型，我们引入新的`Material`类。这个类将保存纹理路径和`Mesh`实例列表。因此，`Model`实例将与`Material`列表而非`Mesh`直接关联。
+
+`Material`类定义如下：
+
+```java
+package org.lwjglb.engine.graph;
+
+import java.util.*;
+
+public class Material {
+    private List<Mesh> meshList;
+    private String texturePath;
+
+    public Material() {
+        meshList = new ArrayList<>();
+    }
+
+    public void cleanup() {
+        meshList.forEach(Mesh::cleanup);
+    }
+
+    public List<Mesh> getMeshList() {
+        return meshList;
+    }
+
+    public String getTexturePath() {
+        return texturePath;
+    }
+
+    public void setTexturePath(String texturePath) {
+        this.texturePath = texturePath;
+    }
+}
+```
+
+由于`Mesh`实例现在属于`Material`类，我们需要相应修改`Model`类：
+
+```java
+package org.lwjglb.engine.graph;
+
+import org.lwjglb.engine.scene.Entity;
+import java.util.*;
+
+public class Model {
+    private final String id;
+    private List<Entity> entitiesList;
+    private List<Material> materialList;
+
+    public Model(String id, List<Material> materialList) {
+        this.id = id;
+        entitiesList = new ArrayList<>();
+        this.materialList = materialList;
+    }
+
+    public void cleanup() {
+        materialList.forEach(Material::cleanup);
+    }
+
+    public List<Entity> getEntitiesList() {
+        return entitiesList;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public List<Material> getMaterialList() {
+        return materialList;
+    }
+}
+```
+
+我们需要传递纹理坐标作为另一个VBO，因此修改`Mesh`类以接受包含纹理坐标的浮点数组：
+
+```java
+public class Mesh {
+    // 保留原有字段...
+
+    public Mesh(float[] positions, float[] textCoords, int[] indices) {
+        numVertices = indices.length;
+        vboIdList = new ArrayList<>();
+
+        vaoId = glGenVertexArrays();
+        glBindVertexArray(vaoId);
+
+        // Positions VBO
+        int vboId = glGenBuffers();
+        vboIdList.add(vboId);
+        FloatBuffer positionsBuffer = MemoryUtil.memCallocFloat(positions.length);
+        positionsBuffer.put(0, positions);
+        glBindBuffer(GL_ARRAY_BUFFER, vboId);
+        glBufferData(GL_ARRAY_BUFFER, positionsBuffer, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
+
+        // Texture coordinates VBO
+        vboId = glGenBuffers();
+        vboIdList.add(vboId);
+        FloatBuffer textCoordsBuffer = MemoryUtil.memCallocFloat(textCoords.length);
+        textCoordsBuffer.put(0, textCoords);
+        glBindBuffer(GL_ARRAY_BUFFER, vboId);
+        glBufferData(GL_ARRAY_BUFFER, textCoordsBuffer, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0);
+
+        // Index VBO
+        vboId = glGenBuffers();
+        vboIdList.add(vboId);
+        IntBuffer indicesBuffer = MemoryUtil.memCallocInt(indices.length);
+        indicesBuffer.put(0, indices);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboId);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesBuffer, GL_STATIC_DRAW);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+
+        MemoryUtil.memFree(positionsBuffer);
+        MemoryUtil.memFree(textCoordsBuffer);
+        MemoryUtil.memFree(indicesBuffer);
+    }
     
-        /* 获得图像的高度与宽度 */
-        width = w.get();
-        height = h.get();
-     }
-	 [... 接下来还有更多代码 ...]
+    // 保留其他方法...
+}
 ```
 
-首先我们要为库分配`IntBuffer`，以返回图像大小与通道数。然后，我们调用`stbi_load`方法将图像加载到`ByteBuffer`中，该方法需要如下参数：
+## 使用纹理（Using the textures）
 
-* `filePath`：文件的绝对路径。stb库是本地的，不知道关于`CLASSPATH`的任何内容。因此，我们将使用常规的文件系统路径。
-* `width`：图像宽度，获取的图像宽度将被写入其中。
-* `height`：图像高度，获取的图像高度将被写入其中。
-* `channels`：图像通道。
-* `desired_channels`：所需的图像通道，我们传入4（RGBA）。
+现在我们需要在着色器中使用纹理。顶点着色器中我们修改了第二个输入参数（现在它是`vec2`类型）。片段着色器中使用纹理坐标通过`sampler2D`统一变量从纹理采样颜色。
 
-一件关于OpenGL的重要事项，由于历史原因，要求纹理图像的大小（每个轴的像素数）必须是二的指数（2, 4, 8, 16, ....）。一些驱动解除了这种限制，但最好还是保持以免出现问题。
-
-下一步是将纹理上传到显存中。首先需要创建一个新的纹理ID，与该纹理相关的操作都要使用该ID，因此我们需要绑定它。
-
-```java
-// 创建一个新的OpenGL纹理
-int textureId = glGenTextures();
-// 绑定纹理
-glBindTexture(GL_TEXTURE_2D, textureId);
-```
-
-然后需要告诉OpenGL如何解包RGBA字节，由于每个分量只有一个字节大小，所以我们需要添加以下代码：
-
-```java
-glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-```
-
-最后我们可以上传纹理数据：
-
-```java
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height,
-    0, GL_RGBA, GL_UNSIGNED_BYTE, buf);
-```
-
-`glTexImage2D`的参数如下所示：
-
-* `target`: 指定目标纹理（纹理类型），本例中是`GL_TEXTURE_2D`。
-* `level`: 指定纹理细节的等级。0级是基本图像等级，第n级是第n个多级渐远纹理的图像，之后再谈论这个问题。
-* `internal format`: 指定纹理中颜色分量的数量。
-* `width`: 指定纹理图像的宽度。
-* `height`: 指定纹理图像的高度。
-* `border`: 此值必须为0。
-* `format`: 指定像素数据的格式，现在为RGBA。
-* `type`: 指定像素数据的类型。现在，我们使用的是无符号字节。
-* `data`: 储存数据的缓冲区。
-
-在一些代码中，你可能会发现在调用`glTexImage2D`方法前设置了一些过滤参数。过滤是指在缩放时如何绘制图像，以及如何插值像素。如果未设置这些参数，纹理将不会显示。因此，在`glTexImage2D`方法调用之前，会看到以下代码：
-
-```java
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-```
-
-这些参数基本上在说，当绘制一个像素时，如果没有直接一对一地关联到纹理坐标，它将选择最近的纹理坐标点。
-
-到目前为止，我们不会设置这些参数。相反，我们将生成一个多级渐远纹理（Mipmap）。多级渐远纹理是由高细节纹理生成的逐级降低分辨率的纹理集合。当我们的物体缩放时，就将自动使用低分辨率的图像。
-
-为了生成多级渐远纹理，只需要编写以下代码（目前我们把它放在`glTexImage2D`方法调用之后）：
-
-```java
-glGenerateMipmap(GL_TEXTURE_2D);
-```
-
-最后，我们可以释放原始图像数据本身的内存：
-
-```java
-stbi_image_free(buf);
-```
-
-就这样，我们已经成功地加载了纹理，现在需要使用它。正如此前所说，我们需要把纹理坐标作为另一个VBO。因此，我们要修改`Mesh`类以接收储存纹理坐标的浮点数组，而不是颜色（我们可以同时有颜色和纹理，但为了简化它，我们将删除颜色），构造函数现在如下所示：
-
-```java
-public Mesh(float[] positions, float[] textCoords, int[] indices,
-    Texture texture)
-```
-
-纹理坐标VBO与颜色VBO创建的方式相同。唯一的区别是它每个顶点属性只有两个分量而不是三个：
-
-```java
-vboId = glGenBuffers();
-vboIdList.add(vboId);
-textCoordsBuffer = MemoryUtil.memAllocFloat(textCoords.length);
-textCoordsBuffer.put(textCoords).flip();
-glBindBuffer(GL_ARRAY_BUFFER, vboId);
-glBufferData(GL_ARRAY_BUFFER, textCoordsBuffer, GL_STATIC_DRAW);
-glEnableVertexAttribArray(1);
-glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0);
-```
-
-现在我们需要在着色器中使用纹理。在顶点着色器中，我们修改了第二个输入参数，因为现在它是一个`vec2`（也顺便更改了名称）。顶点着色器就像此前一样，仅将纹理坐标传给片元着色器。
-
+顶点着色器：
 ```glsl
 #version 330
 
 layout (location=0) in vec3 position;
 layout (location=1) in vec2 texCoord;
 
-out vec2 outTexCoord;
+out vec2 outTextCoord;
 
-uniform mat4 worldMatrix;
 uniform mat4 projectionMatrix;
+uniform mat4 modelMatrix;
 
 void main()
 {
-    gl_Position = projectionMatrix * worldMatrix * vec4(position, 1.0);
-    outTexCoord = texCoord;
+    gl_Position = projectionMatrix * modelMatrix * vec4(position, 1.0);
+    outTextCoord = texCoord;
 }
 ```
 
-在片元着色器中，我们使用那些纹理坐标来设置像素颜色：
-
+片段着色器：
 ```glsl
 #version 330
 
-in  vec2 outTexCoord;
+in vec2 outTextCoord;
+
 out vec4 fragColor;
 
-uniform sampler2D texture_sampler;
+uniform sampler2D txtSampler;
 
 void main()
 {
-    fragColor = texture(texture_sampler, outTexCoord);
+    fragColor = texture(txtSampler, outTextCoord);
 }
 ```
 
-在分析代码之前，我们先理清一些概念。显卡有几个空间或槽来储存纹理，每一个空间被称为纹理单元（Texture Unit）。当使用纹理时，我们必须设置想用的纹理。如你所见，我们有一个名为`texture_sampler`的新Uniform，该Uniform的类型是`sampler2D`，并储存有我们希望使用的纹理单元的值。
-
-在`main`函数中，我们使用名为`texture`的纹理采样函数，该函数有两个参数：取样器（Sampler）和纹理坐标，并返回正确的颜色。取样器Uniform允许使用多重纹理（Multi-texture），不过现在不是讨论这个话题的时候，但是我们会在稍后再尝试添加。
-
-因此，在`ShaderProgram`类中，我们将创建一个新的方法，允许为整数型Uniform设置值：
+在`SceneRender`类中，我们首先为纹理采样器创建新的统一变量，然后在渲染过程中使用纹理：
 
 ```java
-public void setUniform(String uniformName, int value) {
-    glUniform1i(uniforms.get(uniformName), value);
+public class SceneRender {
+    // 保留原有字段和方法...
+
+    private void createUniforms() {
+        // 原有uniform创建...
+        uniformsMap.createUniform("txtSampler");
+    }
+
+    public void render(Scene scene) {
+        shaderProgram.bind();
+
+        uniformsMap.setUniform("projectionMatrix", scene.getProjection().getProjMatrix());
+
+        uniformsMap.setUniform("txtSampler", 0);
+
+        Collection<Model> models = scene.getModelMap().values();
+        TextureCache textureCache = scene.getTextureCache();
+        for (Model model : models) {
+            List<Entity> entities = model.getEntitiesList();
+
+            for (Material material : model.getMaterialList()) {
+                Texture texture = textureCache.getTexture(material.getTexturePath());
+                glActiveTexture(GL_TEXTURE0);
+                texture.bind();
+
+                for (Mesh mesh : material.getMeshList()) {
+                    glBindVertexArray(mesh.getVaoId());
+                    for (Entity entity : entities) {
+                        uniformsMap.setUniform("modelMatrix", entity.getModelMatrix());
+                        glDrawElements(GL_TRIANGLES, mesh.getNumVertices(), GL_UNSIGNED_INT, 0);
+                    }
+                }
+            }
+        }
+
+        glBindVertexArray(0);
+        shaderProgram.unbind();
+    }
 }
 ```
 
-在`Renderer`类的`init`方法中，我们将创建一个新的Uniform：
+我们还需要修改`UniformsMap`类，添加设置采样器值的新方法：
 
 ```java
-shaderProgram.createUniform("texture_sampler");
+public class UniformsMap {
+    // 保留原有字段和方法...
+
+    private int getUniformLocation(String uniformName) {
+        Integer location = uniforms.get(uniformName);
+        if (location == null) {
+            throw new RuntimeException("Could not find uniform [" + uniformName + "]");
+        }
+        return location.intValue();
+    }
+
+    public void setUniform(String uniformName, int value) {
+        glUniform1i(getUniformLocation(uniformName), value);
+    }
+
+    public void setUniform(String uniformName, Matrix4f value) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            glUniformMatrix4fv(getUniformLocation(uniformName), false, 
+                value.get(stack.mallocFloat(16)));
+        }
+    }
+}
 ```
 
-此外，在`Renderer`类的`render`方法中，我们将Uniform的值设置为0（我们现在不使用多个纹理，所以只使用单元0）。
-
-```java
-shaderProgram.setUniform("texture_sampler", 0);
-```
-
-最好，我们只需修改`Mesh`类的`render`方法就可以使用纹理。在方法起始处，添加以下几行代码：
-
-```java
-// 激活第一个纹理单元
-glActiveTexture(GL_TEXTURE0);
-// 绑定纹理
-glBindTexture(GL_TEXTURE_2D, texture.getId());
-```
-
-我们已经将`texture.getId()`所获得的纹理ID绑定到纹理单元0上。
-
-我们刚刚修改了代码来支持纹理，现在需要为三维立方体设置纹理坐标，纹理图像文件是这样的：
+现在我们已经修改代码库以支持纹理。接下来需要为3D立方体设置纹理坐标。我们的纹理图像文件如下：
 
 ![立方体纹理](_static/07/cube_texture.png)
 
-在我们的三维模型中，共有八个顶点。我们首先定义正面每个顶点的纹理坐标。
+在3D模型中有8个顶点。我们需要为每个顶点定义纹理坐标。由于同一顶点在不同面上需要不同的纹理坐标，我们不得不重复某些顶点。最终顶点数从8个增加到20个。
 
-![立方体纹理的正面](_static/07/cube_texture_front_face.png)
+在下一章我们将学习如何加载3D建模工具生成的模型，这样就不需要手动定义位置和纹理坐标了（对于更复杂的模型来说，手动定义是不现实的）。
 
-| 顶点 | 纹理坐标 |
-| --- | --- |
-| V0 | \(0.0, 0.0\) |
-| V1 | \(0.0, 0.5\) |
-| V2 | \(0.5, 0.5\) |
-| V3 | \(0.5, 0.0\) |
-
-然后，定义顶面的纹理映射。
-
-![正方体纹理的顶面](_static/07/cube_texture_top_face.png)
-
-| 顶点 | 纹理坐标 |
-| --- | --- |
-| V4 | \(0.0, 0.5\) |
-| V5 | \(0.5, 0.5\) |
-| V0 | \(0.0, 1.0\) |
-| V3 | \(0.5, 1.0\) |
-
-如你所见，有一个问题，我们需要为同一个顶点（V0和V3）设置不同的纹理坐标。怎么样才能解决这个问题呢？解决这一问题的唯一方法是重复一些顶点并关联不同的纹理坐标。对于顶面，我们需要重复四个顶点并为它们分配正确的纹理坐标。
-
-因为前面、后面和侧面都使用相同的纹理，所以我们不需要重复这些顶点。在源码中有完整的定义，但是我们需要从8个点上升到20个点了。最终的结果就像这样。
-
-![有纹理的立方体](_static/07/cube_with_texture.png)
-
-在接下来的章节中，我们将学习如何加载由3D建模工具生成的模型，这样我们就不需要手动定义顶点和纹理坐标了（顺便一提，对于更复杂的模型，手动定义是不存在的）。
-
-## 透明纹理简介
-
-如你所见，当加载图像时，我们检索了四个RGBA组件，包括透明度等级。但如果加载一个透明的纹理，可能看不到任何东西。为了支持透明度，我们需要通过以下代码启用混合（Blend）：
+最后修改`Main`类中的`init`方法以定义纹理坐标并加载纹理数据：
 
 ```java
-glEnable(GL_BLEND);
+public class Main implements IAppLogic {
+    private Entity cubeEntity;
+
+    public static void main(String[] args) {
+        Main main = new Main();
+        Engine gameEng = new Engine("chapter-07", new Window.WindowOptions(), main);
+        gameEng.start();
+    }
+
+    public void init(Window window, Scene scene, Render render) {
+        float[] positions = new float[]{
+                // V0
+                -0.5f, 0.5f, 0.5f,
+                // V1
+                -0.5f, -0.5f, 0.5f,
+                // V2
+                0.5f, -0.5f, 0.5f,
+                // V3
+                0.5f, 0.5f, 0.5f,
+                // V4
+                -0.5f, 0.5f, -0.5f,
+                // V5
+                0.5f, 0.5f, -0.5f,
+                // V6
+                -0.5f, -0.5f, -0.5f,
+                // V7
+                0.5f, -0.5f, -0.5f,
+
+                // 为顶面纹理坐标重复的顶点
+                // V8: V4重复
+                -0.5f, 0.5f, -0.5f,
+                // V9: V5重复
+                0.5f, 0.5f, -0.5f,
+                // V10: V0重复
+                -0.5f, 0.5f, 0.5f,
+                // V11: V3重复
+                0.5f, 0.5f, 0.5f,
+
+                // 为右侧面纹理坐标重复的顶点
+                // V12: V3重复
+                0.5f, 0.5f, 0.5f,
+                // V13: V2重复
+                0.5f, -0.5f, 0.5f,
+
+                // 为左侧面纹理坐标重复的顶点
+                // V14: V0重复
+                -0.5f, 0.5f, 0.5f,
+                // V15: V1重复
+                -0.5f, -0.5f, 0.5f,
+
+                // 为底面纹理坐标重复的顶点
+                // V16: V6重复
+                -0.5f, -0.5f, -0.5f,
+                // V17: V7重复
+                0.5f, -0.5f, -0.5f,
+                // V18: V1重复
+                -0.5f, -0.5f, 0.5f,
+                // V19: V2重复
+                0.5f, -0.5f, 0.5f,
+        };
+
+        float[] textCoords = new float[]{
+                // 前面纹理坐标
+                0.0f, 0.0f,
+                0.0f, 0.5f,
+                0.5f, 0.5f,
+                0.5f, 0.0f,
+
+                // 后面纹理坐标
+                0.0f, 0.0f,
+                0.5f, 0.0f,
+                0.0f, 0.5f,
+                0.5f, 0.5f,
+
+                // 顶面纹理坐标
+                0.0f, 0.5f,
+                0.5f, 0.5f,
+                0.0f, 1.0f,
+                0.5f, 1.0f,
+
+                // 右侧面纹理坐标
+                0.0f, 0.0f,
+                0.0f, 0.5f,
+
+                // 左侧面纹理坐标
+                0.5f, 0.0f,
+                0.5f, 0.5f,
+
+                // 底面纹理坐标
+                0.5f, 0.0f,
+                1.0f, 0.0f,
+                0.5f, 0.5f,
+                1.0f, 0.5f,
+        };
+
+        int[] indices = new int[]{
+                // 前面
+                0, 1, 3, 3, 1, 2,
+                // 顶面
+                8, 10, 11, 9, 8, 11,
+                // 右侧面
+                12, 13, 7, 5, 12, 7,
+                // 左侧面
+                14, 15, 6, 4, 14, 6,
+                // 底面
+                16, 18, 19, 17, 16, 19,
+                // 后面
+                4, 6, 7, 5, 4, 7,
+        };
+
+        Texture texture = scene.getTextureCache().createTexture("resources/models/cube/cube.png");
+        Material material = new Material();
+        material.setTexturePath(texture.getTexturePath());
+        List<Material> materialList = new ArrayList<>();
+        materialList.add(material);
+
+        Mesh mesh = new Mesh(positions, textCoords, indices);
+        material.getMeshList().add(mesh);
+        Model cubeModel = new Model("cube-model", materialList);
+        scene.addModel(cubeModel);
+
+        cubeEntity = new Entity("cube-entity", cubeModel.getId());
+        cubeEntity.setPosition(0, 0, -2);
+        scene.addEntity(cubeEntity);
+    }
+
+    // 保留其他方法...
+}
 ```
 
-但仅启用混合，透明效果仍然不会显示，我们还需要指示OpenGL如何进行混合。这是通过调用`glBlendFunc`方法完成的：
+最终效果如下图所示：
 
-```java
-glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-```
+![带纹理的立方体](_static/07/cube_with_texture.png)
 
-你可以查看[此处](https://learnopengl-cn.github.io/04%20Advanced%20OpenGL/03%20Blending/)有关可使用的不同功能的详细说明。
-
-即使启用了混合并设置了功能，也可能看不到正确的透明效果。其原因是深度测试，当使用深度值丢弃片元时，我们可能将具有透明度的片元与背景混合，而不是与它们后面的片元混合，这将得到错误的渲染结果。为了解决该问题，我们需要先绘制不透明物体，然后按深度递减顺序绘制具有透明度的物体（应先绘制较远物体）。
-
+[下一章](./08-camera.md)
