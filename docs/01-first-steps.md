@@ -162,8 +162,8 @@ public class HelloWorld {
     ...
 }
 ``` 
-??? note "mods"
-    mods数使得开发者能够检测组合键操作（如 Ctrl+C、Shift+Click 等）
+??? note "按键回调中“mods”是什么"
+    mods参数使得开发者能够检测组合键操作（如 Ctrl+C、Shift+Click 等）
 
     | 修饰键常量             | 值（十六进制） | 对应按键               |
     |------------------------|---------------|------------------------|
@@ -220,7 +220,7 @@ public class HelloWorld {
 
 尽管我们将在后续章节详细解释，但这里你会看到LWJGL中的一个关键类`MemoryStack`。如前所述，LWJGL是对本地库（基于C的函数）的封装。Java没有指针的概念（至少从C的角度来看），因此向C函数传递结构并非易事。为了共享这些结构，并实现引用传递参数（如上面的示例），我们需要分配可以被本地代码访问的内存。LWJGL提供了`MemoryStack`类，允许我们分配可被本地代码访问的内存/结构，这些内存会在`stackPush`方法调用的作用域结束时自动清理（实际上是返回到一个类似池的结构中以供重用）。所有可被本地代码访问的内存/结构都是通过这个栈类实例化的。在上面的示例中，我们需要调用`glfwGetWindowSize`获取窗口尺寸。返回值通过引用传递的方式返回，因此我们需要分配两个int（以两个`IntBuffer`的形式）。通过这些信息和显示器的尺寸，我们可以居中窗口，设置OpenGL，启用**垂直同步**（Vertical Synchronization，更多内容见下一章），最后显示窗口。
 
-现在我们需要一个无限循环来持续渲染内容：
+现在我们需要一个无限循环来持续渲染内容：<p id="a1"></p>
 ```java
 public class HelloWorld {
     ...
@@ -247,6 +247,19 @@ public class HelloWorld {
 ```
 
 ??? note "openGL绑定上下文"
+    # 为什么要绑定openGL上下文
+    
+   OpenGL本身是一个全局状态机，所有操作（如绘制、着色器、纹理绑定）都依赖于当前上下文的状态。
+
+   例如：
+
+    ```
+    glClearColor(1.0f, 0.0f, 0.0f, 1.0f); // 设置清除颜色（存储在上下文中）
+    glClear(GL_COLOR_BUFFER_BIT);         // 使用当前上下文的清除颜色
+    ```
+
+   如果没有绑定上下文，这些操作不知道应该修改哪个窗口/渲染目标的状态。
+
     # GLFW上下文绑定与LWJGL能力加载分工对比
 
     | 功能/特性                | `glfwMakeContextCurrent(window)`                          | `GL.createCapabilities()`                                |
@@ -263,7 +276,8 @@ public class HelloWorld {
     | **类比说明**            | 指定当前线程使用哪个画布                                 | 准备 当前画布可用的绘画工具                              |
 
 ??? note "事件轮询"
-    前文init初始化时注册了glfwSetKeyCallback
+    <a href="#a1">前文</a>init初始化时注册了glfwSetKeyCallback
+    
     每次循环都会通过 glfwPollEvents() 检查是否有新事件（如 ESC 键释放），若有则触发回调函数glfwSetKeyCallback
 
 我们首先创建OpenGL上下文，设置清除颜色，并在每次循环中执行清除操作（针对颜色和深度缓冲区），同时轮询键盘事件以检测是否需要关闭窗口。我们将在后续章节详细解释这些概念。不过，为了完整性，渲染是在一个目标上进行的，本例中是一个包含颜色信息和深度值（用于3D）的缓冲区。完成渲染后，我们只需通过调用`glfwSwapBuffers`通知GLFW缓冲区已准备好显示。GLFW会维护多个缓冲区，因此我们可以在一个缓冲区上执行渲染操作，同时另一个缓冲区显示在窗口中（否则会出现闪烁问题）。

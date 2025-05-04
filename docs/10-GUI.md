@@ -589,4 +589,4 @@ public class Main implements IAppLogic, IGuiInstance {
 
 ![演示窗口](_static/10/demo.png)
 
-[下一章](./11-ERROR.md)
+[下一章](11-light.md)

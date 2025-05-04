@@ -1,7 +1,21 @@
 # 《用LWJGL 3开发3D游戏(3D Game Development with LWJGL 3)》中文翻译
+![](https://img.shields.io/badge/license-CC--BY--SA--4.0-green)
+![](https://img.shields.io/github/stars/yin2hao/lwjglbook-CN-Translation)
 
-# 暂未完成，不具备可读性
-# Fork自[mouse0w0](https://github.com/mouse0w0/lwjglbook-CN-Translation)
+暂未完成纠错，暂不建议阅读
+
+本书英文原文[GitHub](https://github.com/lwjglgamedev/lwjglbook-bookcontents)(以下称为原文)
+
+本翻译仓库fork自[mouse0w0](https://github.com/mouse0w0/lwjglbook-CN-Translation)(以下称为原译文)
+
+## 本仓库介绍
+原译文对原文进行了详细的翻译。但我在学习时发现原译文落后于原文的更改，且章节结构与现原文不同，故创建此仓库进行翻译
+
+### 本仓库与原译文的区别
+* 使用AI逐行翻译了原文
+* 将网页样式更改为mkdocs-meterial
+* 添加如下部分笔记![img.png](_static/readmeimg/img.png)
+
 
 ## 本书原介绍
 这本在线电子书主要讲解使用LWJGL 3库开发3D游戏。
@@ -35,7 +49,7 @@ Antonio Hernández Bejarano
 ## 特别感谢
 感谢所有提供了指正、意见和建议的读者。
 
-## 译者的话
+## 原翻译译者的话
 本书是译者为了学习LWJGL3和OpenGL而翻译的。限于译者的能力，本译本中如有不妥之处欢迎各位读者指正。
 
 如果你喜欢本译本，请Star并分享它。如果你想捐助译者，请通过下面的链接捐助：[爱发电](https://afdian.com/@mouse)。

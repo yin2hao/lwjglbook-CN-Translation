@@ -10,7 +10,7 @@ nav:
   - 摄像机: 08-camera.md
   - 加载更复杂的模型: 09-loading-more-complex-models.md
   - GUI: 10-GUI.md
-  - ERROR: 11-ERROR.md
+  - 光照: 11-light.md
   - 天空盒与一些优化: 12-sky-box.md
   - 雾: 13-fog.md
   - 法线贴图: 14-normal-mapping.md
@@ -42,10 +42,12 @@ theme:
     - content.code.annotate
     - content.code.select
 
-# extra_javascript:
-#   - https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML
+#extra_javascript:
+#  - https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML
 
 markdown_extensions:
+  - mdx_math:
+      enable_dollar_delimiter: true
   - admonition
   - pymdownx.details
   - pymdownx.superfences
