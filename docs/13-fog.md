@@ -10,30 +10,30 @@
 
 因此，为了应用雾效果，我们需要找到一种方法，随着3D场景对象离相机越来越远，将其淡入雾的颜色。靠近相机的对象不会受到雾的影响，但远处的对象将无法区分。所以我们需要能够计算一个因子，该因子可用于混合雾颜色和每个片段颜色，以模拟该效果。该因子需要取决于到相机的距离。
 
-我们将该因子称为$$fogFactor$$，并将其范围设置为0到1。当$$fogFactor$$为1时，表示对象不会受到雾的影响，也就是说，它是一个附近的对象。当$$fogFactor$$取值为0时，表示对象将完全隐藏在雾中。
+我们将该因子称为$fogFactor$，并将其范围设置为0到1。当$fogFactor$为1时，表示对象不会受到雾的影响，也就是说，它是一个附近的对象。当$fogFactor$取值为0时，表示对象将完全隐藏在雾中。
 
 因此，计算雾颜色所需的方程是：
 
 $$finalColor = (1 - fogFactor) \cdot fogColor + fogFactor \cdot framentColor$$
 
-* $$finalColor$$ 是应用雾效果后产生的颜色。
-* $$fogFactor$$ 是控制雾颜色和片段颜色如何混合的参数。它基本上控制着对象的可见性。
-* $$fogColor$$ 是雾的颜色。
-* $$fragmentColor$$ 是未应用任何雾效果的片段颜色。
+* $finalColor$ 是应用雾效果后产生的颜色。
+* $fogFactor$ 是控制雾颜色和片段颜色如何混合的参数。它基本上控制着对象的可见性。
+* $fogColor$ 是雾的颜色。
+* $fragmentColor$ 是未应用任何雾效果的片段颜色。
 
-现在我们需要找到一种方法来根据距离计算$$fogFactor$$。我们可以选择不同的模型，第一个模型可以是使用线性模型。这是一个模型，给定一个距离，以线性方式改变$$fogFactor$$的值。
+现在我们需要找到一种方法来根据距离计算$fogFactor$。我们可以选择不同的模型，第一个模型可以是使用线性模型。这是一个模型，给定一个距离，以线性方式改变$fogFactor$的值。
 
 线性模型可以通过以下参数定义：
 
-* $$fogStart$$：开始应用雾效果的距离。
-* $$fogFinish$$：雾效果达到最大值的距离。
-* $$distance$$：到相机的距离。
+* $fogStart$：开始应用雾效果的距离。
+* $fogFinish$：雾效果达到最大值的距离。
+* $distance$：到相机的距离。
 
 使用这些参数，要应用的方程是：
 
 $$\displaystyle fogFactor = \frac{(fogFinish - distance)}{(fogFinish - fogStart)}$$
 
-对于距离小于$$fogStart$$的对象，我们只需将$$fogFactor$$设置为$$1$$。下图显示了$$fogFactor$$随距离的变化。
+对于距离小于$fogStart$的对象，我们只需将$fogFactor$设置为$1$。下图显示了$fogFactor$随距离的变化。
 
 ![Linear model](_static/13/linear_model.png)
 
@@ -43,10 +43,10 @@ $$\displaystyle fogFactor = e^{-(distance \cdot fogDensity)^{exponent}} = \frac{
 
 引入的新变量是：
 
-* $$fogDensity$$，它模拟雾的厚度或密度。
-* $$exponent$$，用于控制雾随距离增加的速度。
+* $fogDensity$，它模拟雾的厚度或密度。
+* $exponent$，用于控制雾随距离增加的速度。
 
-下图显示了上述方程在不同指数值（蓝色线为$$2$$，红色线为$$4$$）下的两个图。
+下图显示了上述方程在不同指数值（蓝色线为$2$，红色线为$4$）下的两个图。
 
 ![Exponential model](_static/13/exponential_model.png)
 
@@ -91,7 +91,7 @@ vec4 calcFog(vec3 pos, vec4 color, Fog fog, vec3 ambientLight, DirLight dirLight
 ...
 ```
 
-正如您所见，我们首先计算到顶点的距离。顶点坐标在 `pos` 变量中定义，我们只需要计算长度。然后我们使用指数模型计算雾因子，指数为二（相当于乘以两次）。我们将 `fogFactor` 限制在 $$0$$ 到 $$1$$ 的范围内，并使用 `mix` 函数。在 GLSL 中，`mix` 函数用于混合雾颜色和片段颜色（由变量 `color` 定义）。它等效于应用以下方程：
+正如您所见，我们首先计算到顶点的距离。顶点坐标在 `pos` 变量中定义，我们只需要计算长度。然后我们使用指数模型计算雾因子，指数为二（相当于乘以两次）。我们将 `fogFactor` 限制在 $0$ 到 $1$ 的范围内，并使用 `mix` 函数。在 GLSL 中，`mix` 函数用于混合雾颜色和片段颜色（由变量 `color` 定义）。它等效于应用以下方程：
 
 $$resultColor = (1 - fogFactor) \cdot fog.color + fogFactor \cdot color$$
 

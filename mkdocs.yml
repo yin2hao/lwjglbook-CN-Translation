@@ -31,6 +31,10 @@ copyright: 2025, yin2hao
 repo_url: https://github.com/yin2hao/lwjglbook-CN-Translation
 remote_branch: pages
 
+extra_javascript:
+  - docs/javascript/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
 theme:
   name: material
   icon:
@@ -42,12 +46,9 @@ theme:
     - content.code.annotate
     - content.code.select
 
-#extra_javascript:
-#  - https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML
-
 markdown_extensions:
-  - mdx_math:
-      enable_dollar_delimiter: true
+  - pymdownx.arithmatex:
+      generic: true
   - admonition
   - pymdownx.details
   - pymdownx.superfences
