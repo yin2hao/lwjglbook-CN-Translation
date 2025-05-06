@@ -22,7 +22,7 @@ nav:
   - 实例化渲染: 20-indirect-drawing.md
   - 间接绘制计算着色器: 21-indirect-drawing-and-copute-shaders.md
   - 附录 A - OpenGL调试: appendix-a.md
-  # - 术语表: glossary.md
+  - 术语表: glossary.md
 
 site_name: Lwjglbook中文翻译-笔记
 site_author: Mouse0w0

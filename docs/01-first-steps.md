@@ -248,20 +248,16 @@ public class HelloWorld {
 
 ??? note "openGL绑定上下文"
     # 为什么要绑定openGL上下文
-    
-   OpenGL本身是一个全局状态机，所有操作（如绘制、着色器、纹理绑定）都依赖于当前上下文的状态。
+    OpenGL本身是一个全局状态机，所有操作（如绘制、着色器、纹理绑定）都依赖于当前上下文的状态。
 
-   例如：
-
+    例如：
     ```
     glClearColor(1.0f, 0.0f, 0.0f, 1.0f); // 设置清除颜色（存储在上下文中）
     glClear(GL_COLOR_BUFFER_BIT);         // 使用当前上下文的清除颜色
     ```
 
-   如果没有绑定上下文，这些操作不知道应该修改哪个窗口/渲染目标的状态。
-
+    如果没有绑定上下文，这些操作不知道应该修改哪个窗口/渲染目标的状态。
     # GLFW上下文绑定与LWJGL能力加载分工对比
-
     | 功能/特性                | `glfwMakeContextCurrent(window)`                          | `GL.createCapabilities()`                                |
     |---|---| ---|
     | **核心职责**            | 将指定窗口的OpenGL上下文绑定到当前线程                   | 加载 当前上下文支持的OpenGL函数指针到JVM                  |
