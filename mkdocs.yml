@@ -61,3 +61,5 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.critic
+  - pymdownx.tabbed:
+      alternate_style: true
