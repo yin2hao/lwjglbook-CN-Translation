@@ -138,94 +138,195 @@ void main()
 6.    链接程序。
 
 最后，着色器程序将被加载到GPU中，我们可以通过引用标识符（程序标识符）来使用它。
-```java
-package org.lwjglb.engine.graph;
 
-import org.lwjgl.opengl.GL30;
-import org.lwjglb.engine.Utils;
-
-import java.util.*;
-
-import static org.lwjgl.opengl.GL30.*;
-
-public class ShaderProgram {
-
-    private final int programId;
-
-    public ShaderProgram(List<ShaderModuleData> shaderModuleDataList) {
-        programId = glCreateProgram();
-        if (programId == 0) {
-            throw new RuntimeException("Could not create Shader");
+=== "无注释"
+    ```java
+    package org.lwjglb.engine.graph;
+    
+    import org.lwjgl.opengl.GL30;
+    import org.lwjglb.engine.Utils;
+    
+    import java.util.*;
+    
+    import static org.lwjgl.opengl.GL30.*;
+    
+    public class ShaderProgram {
+    
+        private final int programId;
+    
+        public ShaderProgram(List<ShaderModuleData> shaderModuleDataList) {
+            programId = glCreateProgram();
+            if (programId == 0) {
+                throw new RuntimeException("Could not create Shader");
+            }
+    
+            List<Integer> shaderModules = new ArrayList<>();
+            shaderModuleDataList.forEach(s -> shaderModules.add(createShader(Utils.readFile(s.shaderFile), s.shaderType)));
+    
+            link(shaderModules);
         }
-
-        List<Integer> shaderModules = new ArrayList<>();
-        shaderModuleDataList.forEach(s -> shaderModules.add(createShader(Utils.readFile(s.shaderFile), s.shaderType)));
-
-        link(shaderModules);
-    }
-
-    public void bind() {
-        glUseProgram(programId);
-    }
-
-    public void cleanup() {
-        unbind();
-        if (programId != 0) {
-            glDeleteProgram(programId);
+    
+        public void bind() {
+            glUseProgram(programId);
+        }
+    
+        public void cleanup() {
+            unbind();
+            if (programId != 0) {
+                glDeleteProgram(programId);
+            }
+        }
+    
+        protected int createShader(String shaderCode, int shaderType) {
+            int shaderId = glCreateShader(shaderType);
+            if (shaderId == 0) {
+                throw new RuntimeException("Error creating shader. Type: " + shaderType);
+            }
+    
+            glShaderSource(shaderId, shaderCode);
+            glCompileShader(shaderId);
+    
+            if (glGetShaderi(shaderId, GL_COMPILE_STATUS) == 0) {
+                throw new RuntimeException("Error compiling Shader code: " + glGetShaderInfoLog(shaderId, 1024));
+            }
+    
+            glAttachShader(programId, shaderId);
+    
+            return shaderId;
+        }
+    
+        public int getProgramId() {
+            return programId;
+        }
+    
+        private void link(List<Integer> shaderModules) {
+            glLinkProgram(programId);
+            if (glGetProgrami(programId, GL_LINK_STATUS) == 0) {
+                throw new RuntimeException("Error linking Shader code: " + glGetProgramInfoLog(programId, 1024));
+            }
+    
+            shaderModules.forEach(s -> glDetachShader(programId, s));
+            shaderModules.forEach(GL30::glDeleteShader);
+        }
+    
+        public void unbind() {
+            glUseProgram(0);
+        }
+    
+        public void validate() {
+            glValidateProgram(programId);
+            if (glGetProgrami(programId, GL_VALIDATE_STATUS) == 0) {
+                throw new RuntimeException("Error validating Shader code: " + glGetProgramInfoLog(programId, 1024));
+            }
+        }
+    
+        public record ShaderModuleData(String shaderFile, int shaderType) {
         }
     }
+    ```
 
-    protected int createShader(String shaderCode, int shaderType) {
-        int shaderId = glCreateShader(shaderType);
-        if (shaderId == 0) {
-            throw new RuntimeException("Error creating shader. Type: " + shaderType);
+=== "有注释"
+    ```java
+    package org.lwjglb.engine.graph;
+    
+    import org.lwjgl.opengl.GL30;
+    import org.lwjglb.engine.Utils;
+    
+    import java.util.*;
+    
+    import static org.lwjgl.opengl.GL30.*;
+    
+    public class ShaderProgram {
+    
+        private final int programId;//存储着色器程序id
+    
+        public ShaderProgram(List<ShaderModuleData> shaderModuleDataList) {
+            //接收着色器模块数据列表(文件路径和类型)
+            programId = glCreateProgram();
+            if (programId == 0) {
+                throw new RuntimeException("Could not create Shader");
+            }
+    
+            List<Integer> shaderModules = new ArrayList<>();//创建新的OpenGL着色器程序
+            //检查新创建的OpenGL着色器程序错误
+            shaderModuleDataList.forEach(s -> shaderModules.add(createShader(Utils.readFile(s.shaderFile), s.shaderType)));
+    
+            link(shaderModules);
         }
-
-        glShaderSource(shaderId, shaderCode);
-        glCompileShader(shaderId);
-
-        if (glGetShaderi(shaderId, GL_COMPILE_STATUS) == 0) {
-            throw new RuntimeException("Error compiling Shader code: " + glGetShaderInfoLog(shaderId, 1024));
+    
+        //激活此着色器程序用于渲染
+        public void bind() {
+            glUseProgram(programId);
         }
-
-        glAttachShader(programId, shaderId);
-
-        return shaderId;
-    }
-
-    public int getProgramId() {
-        return programId;
-    }
-
-    private void link(List<Integer> shaderModules) {
-        glLinkProgram(programId);
-        if (glGetProgrami(programId, GL_LINK_STATUS) == 0) {
-            throw new RuntimeException("Error linking Shader code: " + glGetProgramInfoLog(programId, 1024));
+    
+        //释放资源：解绑并删除程序
+        public void cleanup() {
+            unbind();
+            if (programId != 0) {
+                glDeleteProgram(programId);
+            }
         }
-
-        shaderModules.forEach(s -> glDetachShader(programId, s));
-        shaderModules.forEach(GL30::glDeleteShader);
-    }
-
-    public void unbind() {
-        glUseProgram(0);
-    }
-
-    public void validate() {
-        glValidateProgram(programId);
-        if (glGetProgrami(programId, GL_VALIDATE_STATUS) == 0) {
-            throw new RuntimeException("Error validating Shader code: " + glGetProgramInfoLog(programId, 1024));
+    
+        //创建单个着色器(顶点、片段等)
+        protected int createShader(String shaderCode, int shaderType) {
+            //创建着色器并检查错误
+            int shaderId = glCreateShader(shaderType);
+            if (shaderId == 0) {
+                throw new RuntimeException("Error creating shader. Type: " + shaderType);
+            }
+    
+            //设置着色器源代码并编译
+            glShaderSource(shaderId, shaderCode);
+            glCompileShader(shaderId);
+    
+            //检查编译状态，失败时获取错误日志
+            if (glGetShaderi(shaderId, GL_COMPILE_STATUS) == 0) {
+                throw new RuntimeException("Error compiling Shader code: " + glGetShaderInfoLog(shaderId, 1024));
+            }
+    
+            //将着色器附加到程序并返回其ID
+            glAttachShader(programId, shaderId);
+            return shaderId;
+        }
+    
+        public int getProgramId() {
+            return programId;
+        }
+    
+        //将所有附加的着色器链接成完整程序
+        private void link(List<Integer> shaderModules) {
+            //链接程序并检查错误
+            glLinkProgram(programId);
+            if (glGetProgrami(programId, GL_LINK_STATUS) == 0) {
+                throw new RuntimeException("Error linking Shader code: " + glGetProgramInfoLog(programId, 1024));
+            }
+    
+            //链接后清理着色器对象
+            shaderModules.forEach(s -> glDetachShader(programId, s));
+            shaderModules.forEach(GL30::glDeleteShader);
+        }
+    
+        //链接后解绑着色器对象
+        public void unbind() {
+            glUseProgram(0);
+        }
+    
+        //验证着色器程序的有效性
+        public void validate() {
+            glValidateProgram(programId);
+            if (glGetProgrami(programId, GL_VALIDATE_STATUS) == 0) {
+                throw new RuntimeException("Error validating Shader code: " + glGetProgramInfoLog(programId, 1024));
+            }
+        }
+    
+        public record ShaderModuleData(String shaderFile, int shaderType) {
         }
     }
-
-    public record ShaderModuleData(String shaderFile, int shaderType) {
-    }
-}
-```
+    ```
 
 `ShaderProgram`的构造函数接收一个`ShaderModuleData`实例列表，这些实例定义了着色器模块类型（顶点、片段等）和包含着色器模块代码的源文件路径。构造函数首先通过编译每个着色器模块（通过调用`createShader`方法）创建一个新的OpenGL着色器程序，最后将它们全部链接在一起（通过调用`link`方法）。一旦着色器程序被链接，编译后的顶点和片段着色器就可以被释放（通过调用`glDetachShader`）。
 
-`validate`方法基本上调用了`glValidateProgram`函数。此函数主要用于调试目的，当你的游戏进入生产阶段时不应使用它。该方法尝试验证着色器在**当前OpenGL状态**下是否正确。这意味着，即使着色器是正确的，由于当前状态不足以运行着色器（某些数据可能尚未上传），验证有时也会失败。你应在所有必需的输入和输出数据正确绑定时调用它（最好在执行任何绘制调用之前）。
+`validate`方法调用了`glValidateProgram`函数。此函数主要用于调试目的，当你的游戏进入生产阶段时不应使用它。该方法尝试验证着色器在**当前OpenGL状态**下是否正确。这意味着，即使着色器是正确的，由于当前状态不足以运行着色器（某些数据可能尚未上传），验证有时也会失败。你应在所有必需的输入和输出数据正确绑定时调用它（最好在执行任何绘制调用之前）。
 
 `ShaderProgram`还提供了用于渲染时使用此程序的方法，即绑定它，另一个方法用于解绑（当我们完成时），最后是一个cleanup方法，用于在不再需要时释放所有资源。
 
@@ -240,7 +341,6 @@ import java.nio.file.*;
 public class Utils {
 
     private Utils() {
-        // Utility class
     }
 
     public static String readFile(String filePath) {
@@ -257,36 +357,64 @@ public class Utils {
 
 我们还需要一个新类`Scene`，它将保存我们的3D场景的值，如模型、灯光等。目前它只存储我们要绘制的模型的网格（顶点集）。以下是该类的源代码：
 
-```java
-package org.lwjglb.engine.scene;
-
-import org.lwjglb.engine.graph.Mesh;
-
-import java.util.*;
-
-public class Scene {
-
-    private Map<String, Mesh> meshMap;
-
-    public Scene() {
-        meshMap = new HashMap<>();
+=== "无注释"
+    ```java
+    package org.lwjglb.engine.scene;
+    
+    import org.lwjglb.engine.graph.Mesh;
+    import java.util.*;
+    public class Scene {
+    
+        private Map<String, Mesh> meshMap;
+    
+        public Scene() {
+            meshMap = new HashMap<>();
+        }
+    
+        public void addMesh(String meshId, Mesh mesh) {
+            meshMap.put(meshId, mesh);
+        }
+    
+        public void cleanup() {
+            meshMap.values().forEach(Mesh::cleanup);
+        }
+    
+        public Map<String, Mesh> getMeshMap() {
+            return meshMap;
+        }
     }
+    ```
 
-    public void addMesh(String meshId, Mesh mesh) {
-        meshMap.put(meshId, mesh);
+=== "有注释"
+    ```java
+    package org.lwjglb.engine.scene;
+    
+    import org.lwjglb.engine.graph.Mesh;
+    import java.util.*;
+    public class Scene {
+        //使用Map来存储场景中的所有网格对象
+        //键(String): 网格的唯一标识符(ID)
+        //值(Mesh): 实际的网格对象
+        private Map<String, Mesh> meshMap;
+    
+        public Scene() {
+            meshMap = new HashMap<>();
+        }
+    
+        public void addMesh(String meshId, Mesh mesh) {
+            meshMap.put(meshId, mesh);
+        }
+    
+        public void cleanup() {
+            meshMap.values().forEach(Mesh::cleanup);
+        }
+    
+        public Map<String, Mesh> getMeshMap() {
+            return meshMap;
+        }
     }
-
-    public void cleanup() {
-        meshMap.values().forEach(Mesh::cleanup);
-    }
-
-    public Map<String, Mesh> getMeshMap() {
-        return meshMap;
-    }
-}
-```
-
-如你所见，它只是将`Mesh`实例存储在Map中，稍后用于绘制。但什么是`Mesh`？它基本上是我们将顶点数据加载到GPU中以供渲染的方式。在详细描述`Mesh`类之前，让我们看看如何在`Main`类中使用它：
+    ```
+如你所见，它只是将`Mesh`实例存储在Map中，稍后用于绘制。但什么是`Mesh`？它是我们将顶点数据加载到GPU中以供渲染的方式。在详细描述`Mesh`类之前，让我们看看如何在`Main`类中使用它：
 ```java
 public class Main implements IAppLogic {
 
@@ -315,66 +443,134 @@ public class Main implements IAppLogic {
 ![三角形](_static/03/triangle_coordinates.png)
 
 定义该数据结构并将其加载到GPU中的类是`Mesh`类，定义如下：
-```java
-package org.lwjglb.engine.graph;
-
-import org.lwjgl.opengl.GL30;
-import org.lwjgl.system.MemoryStack;
-
-import java.nio.FloatBuffer;
-import java.util.*;
-
-import static org.lwjgl.opengl.GL30.*;
-
-public class Mesh {
-
-    private int numVertices;
-    private int vaoId;
-    private List<Integer> vboIdList;
-
-    public Mesh(float[] positions, int numVertices) {
-        this.numVertices = numVertices;
-        vboIdList = new ArrayList<>();
-
-        vaoId = glGenVertexArrays();
-        glBindVertexArray(vaoId);
-
-        // Positions VBO
-        int vboId = glGenBuffers();
-        vboIdList.add(vboId);
-        FloatBuffer positionsBuffer = MemoryUtil.memCallocFloat(positions.length);
-        positionsBuffer.put(0, positions);
-        glBindBuffer(GL_ARRAY_BUFFER, vboId);
-        glBufferData(GL_ARRAY_BUFFER, positionsBuffer, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
-
-        MemoryUtil.memFree(positionsBuffer);
+=== "无注释"
+    ```java
+    package org.lwjglb.engine.graph;
+    
+    import org.lwjgl.opengl.GL30;
+    import org.lwjgl.system.MemoryStack;
+    
+    import java.nio.FloatBuffer;
+    import java.util.*;
+    
+    import static org.lwjgl.opengl.GL30.*;
+    
+    public class Mesh {
+    
+        private int numVertices;
+        private int vaoId;
+        private List<Integer> vboIdList;
+    
+        public Mesh(float[] positions, int numVertices) {
+            this.numVertices = numVertices;
+            vboIdList = new ArrayList<>();
+    
+            vaoId = glGenVertexArrays();
+            glBindVertexArray(vaoId);
+    
+            // Positions VBO
+            int vboId = glGenBuffers();
+            vboIdList.add(vboId);
+            FloatBuffer positionsBuffer = MemoryUtil.memCallocFloat(positions.length);
+            positionsBuffer.put(0, positions);
+            glBindBuffer(GL_ARRAY_BUFFER, vboId);
+            glBufferData(GL_ARRAY_BUFFER, positionsBuffer, GL_STATIC_DRAW);
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
+    
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBindVertexArray(0);
+    
+            MemoryUtil.memFree(positionsBuffer);
+        }
+    
+        public void cleanup() {
+            vboIdList.forEach(GL30::glDeleteBuffers);
+            glDeleteVertexArrays(vaoId);
+        }
+    
+        public int getNumVertices() {
+            return numVertices;
+        }
+    
+        public final int getVaoId() {
+            return vaoId;
+        }
     }
+    ```
 
-    public void cleanup() {
-        vboIdList.forEach(GL30::glDeleteBuffers);
-        glDeleteVertexArrays(vaoId);
+=== "有注释"
+    ```java
+    package org.lwjglb.engine.graph;
+    
+    import org.lwjgl.opengl.GL30;
+    import org.lwjgl.system.MemoryStack;
+    
+    import java.nio.FloatBuffer;
+    import java.util.*;
+    
+    import static org.lwjgl.opengl.GL30.*;
+    
+    public class Mesh {
+    
+        private int numVertices;//存储网格中顶点的数量
+        private int vaoId;//存储OpenGL顶点数组对象(VAO)的ID
+        private List<Integer> vboIdList;//存储所有顶点缓冲对象(VBO)ID的列表
+    
+        //构造函数接收顶点位置数组和顶点数量
+        public Mesh(float[] positions, int numVertices) {
+            //初始化顶点数量和VBO列表
+            this.numVertices = numVertices;
+            vboIdList = new ArrayList<>();
+    
+            //生成并绑定VAO
+            vaoId = glGenVertexArrays();
+            glBindVertexArray(vaoId);
+    
+            //生成VBO并添加到列表
+            int vboId = glGenBuffers();
+            vboIdList.add(vboId);
+            //创建并填充顶点位置缓冲
+            FloatBuffer positionsBuffer = MemoryUtil.memCallocFloat(positions.length);
+            positionsBuffer.put(0, positions);
+            //绑定VBO并上传数据
+            glBindBuffer(GL_ARRAY_BUFFER, vboId);
+            glBufferData(GL_ARRAY_BUFFER, positionsBuffer, GL_STATIC_DRAW);
+            //启用顶点属性并设置属性指针(位置属性)
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
+            
+            //解绑VBO和VAO
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBindVertexArray(0);
+    
+            //释放临时缓冲
+            MemoryUtil.memFree(positionsBuffer);
+        }
+        
+        //清理方法，删除所有VBO和VAO
+        public void cleanup() {
+            vboIdList.forEach(GL30::glDeleteBuffers);
+            glDeleteVertexArrays(vaoId);
+        }
+        
+        //获取顶点数量的方法
+        public int getNumVertices() {
+            return numVertices;
+        }
+    
+        //获取VAO ID的方法
+        public final int getVaoId() {
+            return vaoId;
+        }
     }
+    ```
 
-    public int getNumVertices() {
-        return numVertices;
-    }
-
-    public final int getVaoId() {
-        return vaoId;
-    }
-}
-```
-
-我们现在介绍两个重要概念：**顶点数组对象**（Vertex Array Objects，VAOs）和**顶点缓冲对象**（Vertex Buffer Objects，VBOs）。如果你在上面的代码中迷失了方向，请记住，我们最终所做的是将建模我们想要绘制的对象的数据发送到显卡内存中。当我们存储它时，会获得一个标识符，稍后在绘制时用它来引用它。
+我们现在介绍两个重要概念：**顶点数组对象**（Vertex Array Objects，VAOs）和**顶点缓冲对象**（Vertex Buffer Objects，VBOs）。如果你在上面的代码中迷失了方向，请记住，我们最终所做的是将建模我们想要绘制的对象的数据发送到显卡内存中。当我们存储它时，会获得一个标识符，稍后在绘制时用它(标识符)来引用它(对象数据)。
 
 让我们首先从顶点缓冲对象（VBOs）开始。VBO只是存储在显卡内存中的内存缓冲区，用于存储顶点。这是我们传输建模三角形的浮点数数组的地方。如前所述，OpenGL对我们的数据结构一无所知。实际上，它不仅可以保存坐标，还可以保存其他信息，如纹理、颜色等。顶点数组对象（VAOs）是包含一个或多个VBO的对象，这些VBO通常称为属性列表。每个属性列表可以保存一种类型的数据：位置、颜色、纹理等。你可以自由地在每个槽中存储任何你想要的内容。
 
-VAO就像一个包装器，它分组了将要存储在显卡中的数据的一组定义。当我们创建VAO时，会获得一个标识符。我们使用该标识符来渲染它及其包含的元素，使用我们在创建时指定的定义。
+VAO就像一个包装器，它分组了将要存储在显卡中的数据的一组定义。当我们创建VAO时，会获得一个标识符。我们使用该标识符来渲染它及其包含的元素，通过我们在创建时指定的定义。
 
 让我们回顾一下上面的代码。我们做的第一件事是创建VAO（通过调用`glGenVertexArrays`函数）并绑定它（通过调用`glBindVertexArray`函数）。之后，我们需要创建VBO（通过调用`glGenBuffers`）并将数据放入其中。为此，我们将浮点数数组存储到`FloatBuffer`中。这主要是因为我们必须与基于C的OpenGL库接口，因此必须将浮点数数组转换为可由库管理的内容。
 
