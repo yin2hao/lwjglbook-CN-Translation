@@ -4,7 +4,7 @@
 
 完整源代码可在[此处](https://github.com/lwjglgamedev/lwjglbook/tree/main/chapter-06)获取。
 
-## 模型与实体（Models and Entities）
+## 模型与实体
 
 首先让我们定义3D模型的概念。此前我们一直在处理**网格**（Mesh，即顶点的集合）。模型则是将顶点、颜色、纹理和材质组合在一起的结构体。一个模型可能由多个网格组成，并可以被多个游戏实体共用。游戏实体代表玩家、敌人、障碍物等任何3D场景中的元素。本书中我们假定实体总是与模型相关联（尽管你可以有不参与渲染的无模型实体）。实体包含特定数据（如位置信息），这些数据在渲染时需要使用。稍后你会看到，我们首先获取模型数据，然后绘制与该模型关联的实体。这种设计出于效率考虑——由于多个实体可以共享同一个模型，最好先设置模型共有的元素，再处理每个实体特有的数据。
 
@@ -30,16 +30,17 @@ public class Model {
 }
 ```
 
-模型目前存储**网格**（Mesh）列表并拥有唯一标识符。此外，我们还存储与该模型关联的游戏实体列表（由`Entity`类建模）。如果要创建完整引擎，你可能希望在其他地方存储这些关系（而非模型中），但为简化起见，我们将这些关联存储在`Model`类中，这样渲染流程会更简单。
+模型目前存储网格列表并拥有唯一标识符。此外，我们还存储与该模型关联的游戏实体列表（由`Entity`类建模）。如果要创建完整引擎，你可能希望在其他地方存储这些关系（而非模型中），但为简化起见，我们将这些关联存储在`Model`类中，这样渲染流程会更简单。
 
 在了解`Entity`类之前，让我们先讨论模型变换。为了在3D场景中表示任何模型，我们需要支持对模型进行以下基本操作：
+
 * 平移：沿任意轴移动物体
 * 旋转：绕任意轴旋转物体
 * 缩放：调整物体大小
 
 ![变换示意图](_static/06/transformations.png)
 
-上述操作称为变换（transformations）。你可能已经猜到，我们将通过坐标与矩阵相乘来实现这些变换（一个矩阵用于平移，一个用于旋转，一个用于缩放）。这三个矩阵将组合成名为世界矩阵（world matrix）的单一矩阵，作为**统一变量**（Uniforms）传递给顶点**着色器**（Shader）。
+上述操作称为**变换**（transformations）。你可能已经猜到，我们将通过坐标与矩阵相乘来实现这些变换（一个矩阵用于平移，一个用于旋转，一个用于缩放）。这三个矩阵将组合成名为世界矩阵的单一矩阵，作为统一变量传递给顶点着色器。
 
 之所以称为世界矩阵，是因为我们要将模型坐标转换为世界坐标。当你学习加载3D模型时会发现，这些模型定义在自己的坐标系中。它们不知道你的3D空间大小，需要被放置其中。因此当我们用矩阵乘以坐标时，实际上是在进行坐标系转换（从模型坐标系到3D世界坐标系）。
 
@@ -57,6 +58,7 @@ $$
 $$
 
 平移矩阵定义如下：
+
 $$
 \begin{bmatrix}
 1 & 0 & 0 & dx \\
@@ -66,7 +68,16 @@ $$
 \end{bmatrix}
 $$
 
+平移矩阵参数：
+
+* dx：沿 x 轴的位移。
+
+* dy：沿 y 轴的位移。
+
+* dz：沿 z 轴的位移。
+
 缩放矩阵定义如下：
+
 $$
 \begin{bmatrix}
 sx & 0 & 0 & 0 \\
@@ -76,20 +87,81 @@ sx & 0 & 0 & 0 \\
 \end{bmatrix}
 $$
 
+缩放矩阵参数：
+
+* sx：沿 x 轴缩放。
+
+* sy：沿 y 轴缩放。
+
+* sz：沿 z 轴缩放。
+
 旋转矩阵更为复杂。但要记住，它可以通过三个单轴旋转矩阵相乘构造，或通过应用四元数（稍后详述）来实现。
 
 `Entity`类定义如下：
 ```java
 package org.lwjglb.engine.scene;
 
+import org.joml.*;
+
 public class Entity {
-    private final String id;
-    private final String modelId;
-    private Matrix4f modelMatrix;
-    private Vector3f position;
-    private Quaternionf rotation;
-    private float scale;
-    // 方法实现...
+
+ private final String id;
+ private final String modelId;
+ private Matrix4f modelMatrix;
+ private Vector3f position;
+ private Quaternionf rotation;
+ private float scale;
+
+ public Entity(String id, String modelId) {
+  this.id = id;
+  this.modelId = modelId;
+  modelMatrix = new Matrix4f();
+  position = new Vector3f();
+  rotation = new Quaternionf();
+  scale = 1;
+ }
+
+ public String getId() {
+  return id;
+ }
+
+ public String getModelId() {
+  return modelId;
+ }
+
+ public Matrix4f getModelMatrix() {
+  return modelMatrix;
+ }
+
+ public Vector3f getPosition() {
+  return position;
+ }
+
+ public Quaternionf getRotation() {
+  return rotation;
+ }
+
+ public float getScale() {
+  return scale;
+ }
+
+ public final void setPosition(float x, float y, float z) {
+  position.x = x;
+  position.y = y;
+  position.z = z;
+ }
+
+ public void setRotation(float x, float y, float z, float angle) {
+  this.rotation.fromAxisAngleRad(x, y, z, angle);
+ }
+
+ public void setScale(float scale) {
+  this.scale = scale;
+ }
+
+ public void updateModelMatrix() {
+  modelMatrix.translationRotateScale(position, rotation, scale);
+ }
 }
 ```
 
@@ -109,7 +181,7 @@ public class Scene {
 }
 ```
 
-现在我们需要稍微修改`SceneRender`类。首先需要通过**统一变量**（Uniforms）将模型矩阵信息传递给**着色器**（Shader）。因此，我们将在顶点**着色器**中创建名为`modelMatrix`的新**统一变量**，并在`createUniforms`方法中获取其位置。
+现在我们需要稍微修改`SceneRender`类。首先需要通过统一变量将模型矩阵信息传递给着色器。因此，我们将在顶点着色器中创建名为`modelMatrix`的新**统一变量**，并在`createUniforms`方法中获取其位置。
 
 ```java
 public class SceneRender {
@@ -119,7 +191,7 @@ public class SceneRender {
 }
 ```
 
-接下来修改`render`方法以改变我们访问模型的方式并正确设置模型矩阵**统一变量**：
+接下来修改`render`方法以改变我们访问模型的方式并正确设置模型矩阵统一变量：
 
 ```java
 public class SceneRender {
@@ -143,7 +215,7 @@ public class SceneRender {
 }
 ```
 
-顶点**着色器**修改为使用`modelMatrix`**统一变量**：
+顶点着色器修改为使用`modelMatrix`统一变量：
 
 ```glsl
 #version 330
@@ -154,9 +226,9 @@ void main() {
 }
 ```
 
-代码完全相同。我们使用**统一变量**正确投影坐标，考虑视锥体、位置、缩放和旋转信息。另一个重要问题是：为什么我们不传递平移、旋转和缩放矩阵，而是将它们组合成世界矩阵？原因是应限制**着色器**中使用的矩阵数量。此外，**着色器**中的矩阵乘法对每个顶点只执行一次。投影矩阵在渲染调用之间不变，世界矩阵对每个`Entity`实例也不变。如果独立传递平移、旋转和缩放矩阵，我们将执行更多矩阵乘法。想象一个有大量顶点的模型，这将带来大量额外运算。
+代码完全相同。我们使用统一变量正确投影坐标，考虑视锥体、位置、缩放和旋转信息。另一个重要问题是：为什么我们不传递平移、旋转和缩放矩阵，而是将它们组合成世界矩阵？原因是应限制着色器中使用的矩阵数量。此外，着色器中的矩阵乘法对每个顶点只执行一次。投影矩阵在渲染调用之间不变，世界矩阵对每个`Entity`实例也不变。如果独立传递平移、旋转和缩放矩阵，我们将执行更多矩阵乘法。想象一个有大量顶点的模型，这将带来大量额外运算。
 
-你可能会想，既然模型矩阵对每个`Entity`实例不变，为什么不在Java类中进行矩阵乘法？我们可以为每个`Entity`只乘一次投影矩阵和模型矩阵，作为单个**统一变量**发送。这样能节省更多运算，对吗？答案是这在当前情况下成立，但当我们为游戏引擎添加更多功能时，仍需要在**着色器**中使用世界坐标，因此最好以独立方式处理这两个矩阵。
+你可能会想，既然模型矩阵对每个`Entity`实例不变，为什么不在Java类中进行矩阵乘法？我们可以为每个`Entity`只乘一次投影矩阵和模型矩阵，作为单个统一变量发送。这样能节省更多运算，对吗？答案是这在当前情况下成立，但当我们为游戏引擎添加更多功能时，仍需要在着色器中使用世界坐标，因此最好以独立方式处理这两个矩阵。
 
 最后要强调的是矩阵乘法的顺序。我们首先用模型矩阵乘以位置信息，即将模型坐标转换为世界空间。然后应用投影。记住矩阵乘法不满足交换律，因此顺序非常重要。
 

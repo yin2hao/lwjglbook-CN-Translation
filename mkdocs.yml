@@ -24,8 +24,8 @@ nav:
   - 附录 A - OpenGL调试: appendix-a.md
   - 术语表: glossary.md
 
-site_name: Lwjglbook中文翻译-笔记
-site_author: Mouse0w0
+site_name: LWJGLbook中文翻译-笔记
+site_author: yin2hao
 copyright: 2025, yin2hao
 
 repo_url: https://github.com/yin2hao/lwjglbook-CN-Translation

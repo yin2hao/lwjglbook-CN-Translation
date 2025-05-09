@@ -17,4 +17,12 @@
 17. **顶点数组对象**（Vertex Array Objects，VAOs）
 18. **顶点缓冲对象**（Vertex Buffer Objects，VBOs）
 19. **网格**（Mesh）
-20. 
+20. **透视投影**（Perspective Projection）
+21. **统一变量**（Uniforms）
+22. **透视投影矩阵**（Perspective Projection Matrix）
+23. **纵横比**（Aspect Ratio）
+24. **视野角**（Field of View）
+25. **Java OpenGL数学库**（Java OpenGL Math Library，简称JOML）
+26. **网格**（Mesh)
+27. **变换**（transformations）
+28. 
