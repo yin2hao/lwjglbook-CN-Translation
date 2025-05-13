@@ -1,9 +1,8 @@
 nav:
-  # - 原仓库说明: 00-before-the-beginning
   - 事前准备: 01-first-steps.md
   - 游戏循环: 02-the-game-loop.md
   - 我们的第一个三角形: 03-our-first-triangle.md
-  - 渲染: 04-more-on-render.md
+  - 渲染一个四边形: 04-Render-a-quad.md
   - 透视投影: 05-perspective-projection.md
   - 进入三维世界: 06-going-3D.md
   - 纹理: 07-textures.md
@@ -36,6 +35,8 @@ extra_javascript:
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
 theme:
+  font:
+    text: Roboto
   name: material
   icon:
     annotation: material/plus-circle-outline

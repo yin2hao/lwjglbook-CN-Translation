@@ -4,7 +4,7 @@
 
 你可以在[这里](https://github.com/lwjglgamedev/lwjglbook/tree/main/chapter-08)找到本章的完整源代码。
 
-## 摄像机简介（Camera introduction）
+## 摄像机简介
 
 如果你尝试在OpenGL中搜索特定的摄像机函数，你会发现并没有摄像机的概念，或者说摄像机始终是固定的，位于屏幕中心的(0, 0, 0)位置。因此，我们将通过模拟来实现一个能够在3D场景中移动的摄像机。我们如何实现这一点呢？既然我们无法移动摄像机，那么我们必须同时移动3D空间中的所有对象。换句话说，如果我们不能移动摄像机，我们就移动整个世界。
 
@@ -40,7 +40,7 @@ Transf & = & \lbrack  ProjMatrix \rbrack \cdot \lbrack  ViewMatrix \rbrack \cdot
 \end{array}
 $$
 
-## 摄像机实现（Camera implementation）
+## 摄像机实现
 
 让我们开始修改代码以支持摄像机。首先，我们将创建一个名为`Camera`的新类，它将保存摄像机的位置和旋转状态以及其视图矩阵。该类的定义如下：
 
@@ -139,7 +139,7 @@ public class Camera {
 
 `Camera`类还提供了在向前、向上或向右移动时更新位置的方法。在这些方法中，视图矩阵用于根据当前状态计算前进、上或右方法应该在哪里，并相应地增加位置。我们使用出色的JOML库来为我们进行这些计算，同时保持代码非常简单。
 
-## 使用摄像机（Using the Camera）
+## 使用摄像机
 
 我们将在`Scene`类中存储一个`Camera`实例，因此让我们进行更改：
 

@@ -1,6 +1,6 @@
-# 更多关于渲染（More on render）
+# 渲染一个四边形(Render a quad)
 
-在本章中，我们将继续讨论**OpenGL**是如何渲染内容的。我们将绘制一个四边形而不是三角形，并向**网格**（Mesh）设置额外的数据，比如给每个顶点设置一个颜色。
+在本章中，我们将继续讨论OpenGL是如何渲染内容的。我们将绘制一个四边形而不是三角形，并向**网格**（Mesh）设置额外的数据，比如给每个顶点设置一个颜色。
 
 你可以在[这里](https://github.com/lwjglgamedev/lwjglbook/tree/main/chapter-04)找到本章的完整源代码。
 
@@ -202,6 +202,7 @@ public class Main implements IAppLogic {
 
 ??? note "colors"
     colors使用RGB色彩
+
     在一些图形应用编程接口（API）或渲染引擎中，颜色可以以浮点数的形式来表示，其范围从0.0到1.0。这种表示方法同样涵盖了从完全没有颜色强度到最大强度的整个范围
 现在我们需要修改着色器（shader），不是因为索引，而是为了使用每个顶点的颜色。顶点着色器（`scene.vert`）如下所示：
 

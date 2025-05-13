@@ -14,19 +14,37 @@
 package org.lwjglb.engine.graph;
 
 import org.lwjglb.engine.scene.Entity;
+
 import java.util.*;
 
 public class Model {
-    private final String id;
-    private List<Entity> entitiesList;
-    private List<Mesh> meshList;
 
-    public Model(String id, List<Mesh> meshList) {
-        this.id = id;
-        this.meshList = meshList;
-        entitiesList = new ArrayList<>();
-    }
-    // 其他方法...
+ private final String id;
+ private List<Entity> entitiesList;
+ private List<Mesh> meshList;
+
+ public Model(String id, List<Mesh> meshList) {
+  this.id = id;
+  this.meshList = meshList;
+  entitiesList = new ArrayList<>();
+ }
+
+ public void cleanup() {
+  meshList.forEach(Mesh::cleanup);
+ }
+
+ public List<Entity> getEntitiesList() {
+  return entitiesList;
+ }
+
+ public String getId() {
+  return id;
+ }
+
+ public List<Mesh> getMeshList() {
+  return meshList;
+ }
+
 }
 ```
 
@@ -105,63 +123,63 @@ import org.joml.*;
 
 public class Entity {
 
- private final String id;
- private final String modelId;
- private Matrix4f modelMatrix;
- private Vector3f position;
- private Quaternionf rotation;
- private float scale;
+    private final String id;
+    private final String modelId;
+    private Matrix4f modelMatrix;
+    private Vector3f position;
+    private Quaternionf rotation;
+    private float scale;
+    
+    public Entity(String id, String modelId) {
+        this.id = id;
+        this.modelId = modelId;
+        modelMatrix = new Matrix4f();
+        position = new Vector3f();
+        rotation = new Quaternionf();
+        scale = 1;
+    }
 
- public Entity(String id, String modelId) {
-  this.id = id;
-  this.modelId = modelId;
-  modelMatrix = new Matrix4f();
-  position = new Vector3f();
-  rotation = new Quaternionf();
-  scale = 1;
- }
+    public String getId() {
+        return id;
+    }
 
- public String getId() {
-  return id;
- }
+    public String getModelId() {
+        return modelId;
+    }
 
- public String getModelId() {
-  return modelId;
- }
+    public Matrix4f getModelMatrix() {
+        return modelMatrix;
+    }
 
- public Matrix4f getModelMatrix() {
-  return modelMatrix;
- }
+    public Vector3f getPosition() {
+        return position;
+    }
 
- public Vector3f getPosition() {
-  return position;
- }
+    public Quaternionf getRotation() {
+        return rotation;
+    }
 
- public Quaternionf getRotation() {
-  return rotation;
- }
+    public float getScale() {
+        return scale;
+    }
 
- public float getScale() {
-  return scale;
- }
+    public final void setPosition(float x, float y, float z) {
+    position.x = x;
+    position.y = y;
+    position.z = z;
+    }
 
- public final void setPosition(float x, float y, float z) {
-  position.x = x;
-  position.y = y;
-  position.z = z;
- }
+    public void setRotation(float x, float y, float z, float angle) {
+        this.rotation.fromAxisAngleRad(x, y, z, angle);
+    }
 
- public void setRotation(float x, float y, float z, float angle) {
-  this.rotation.fromAxisAngleRad(x, y, z, angle);
- }
+    public void setScale(float scale) {
+        this.scale = scale;
+    }
 
- public void setScale(float scale) {
-  this.scale = scale;
- }
-
- public void updateModelMatrix() {
-  modelMatrix.translationRotateScale(position, rotation, scale);
- }
+    public void updateModelMatrix() {
+        modelMatrix.translationRotateScale(position, rotation, scale);
+    }
 }
 ```
 
@@ -174,10 +192,50 @@ public class Entity {
 我们需要修改`Scene`类来存储模型而非直接存储`Mesh`实例。此外，我们需要添加支持将`Entity`实例与模型关联以便后续渲染。
 
 ```java
+package org.lwjglb.engine.scene;
+
+import org.lwjglb.engine.graph.Model;
+
+import java.util.*;
+
 public class Scene {
+
     private Map<String, Model> modelMap;
     private Projection projection;
-    // 方法实现...
+
+    public Scene(int width, int height) {
+        modelMap = new HashMap<>();
+        projection = new Projection(width, height);
+    }
+
+    public void addEntity(Entity entity) {
+        String modelId = entity.getModelId();
+        Model model = modelMap.get(modelId);
+        if (model == null) {
+            throw new RuntimeException("Could not find model [" + modelId + "]");
+        }
+        model.getEntitiesList().add(entity);
+    }
+
+    public void addModel(Model model) {
+        modelMap.put(model.getId(), model);
+    }
+
+    public void cleanup() {
+        modelMap.values().forEach(Model::cleanup);
+    }
+
+    public Map<String, Model> getModelMap() {
+        return modelMap;
+    }
+
+    public Projection getProjection() {
+        return projection;
+    }
+
+    public void resize(int width, int height) {
+        projection.updateProjMatrix(width, height);
+    }
 }
 ```
 
@@ -195,23 +253,27 @@ public class SceneRender {
 
 ```java
 public class SceneRender {
+    ...
     public void render(Scene scene) {
-        shaderProgram.bind();
-        uniformsMap.setUniform("projectionMatrix", scene.getProjection().getProjMatrix());
+    shaderProgram.bind();
 
-        Collection<Model> models = scene.getModelMap().values();
-        for (Model model : models) {
-            model.getMeshList().forEach(mesh -> {
-                glBindVertexArray(mesh.getVaoId());
-                for (Entity entity : model.getEntitiesList()) {
-                    uniformsMap.setUniform("modelMatrix", entity.getModelMatrix());
-                    glDrawElements(GL_TRIANGLES, mesh.getNumVertices(), GL_UNSIGNED_INT, 0);
-                }
-            });
-        }
-        glBindVertexArray(0);
-        shaderProgram.unbind();
+    uniformsMap.setUniform("projectionMatrix", scene.getProjection().getProjMatrix());
+
+    Collection<Model> models = scene.getModelMap().values();
+    for (Model model : models) {
+        model.getMeshList().stream().forEach(mesh -> {
+            glBindVertexArray(mesh.getVaoId());
+            List<Entity> entities = model.getEntitiesList();
+            for (Entity entity : entities) {
+                uniformsMap.setUniform("modelMatrix", entity.getModelMatrix());
+                glDrawElements(GL_TRIANGLES, mesh.getNumVertices(), GL_UNSIGNED_INT, 0);
+            }
+        });
     }
+  glBindVertexArray(0);
+  shaderProgram.unbind();
+ }
+ ...
 }
 ```
 

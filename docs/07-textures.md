@@ -4,7 +4,7 @@
 
 你可以在[此处](https://github.com/lwjglgamedev/lwjglbook/tree/main/chapter-07)找到本章的完整源代码。
 
-## 纹理加载（Texture loading）
+## 纹理加载
 
 纹理是一幅映射到模型上用于设置模型像素颜色的图像。你可以将纹理视为包裹在3D模型表面的"皮肤"。具体做法是将图像纹理中的坐标点分配给模型顶点。通过这些信息，OpenGL能够基于纹理图像计算出其他像素应应用的颜色。
 
@@ -38,107 +38,215 @@
 
 首先创建一个新的`Texture`类，用于执行加载纹理所需的所有步骤：
 
-```java
-package org.lwjglb.engine.graph;
-
-import org.lwjgl.system.MemoryStack;
-import java.nio.*;
-import static org.lwjgl.opengl.GL30.*;
-import static org.lwjgl.stb.STBImage.*;
-
-public class Texture {
-    private int textureId;
-    private String texturePath;
-
-    public Texture(int width, int height, ByteBuffer buf) {
-        this.texturePath = "";
-        generateTexture(width, height, buf);
-    }
-
-    public Texture(String texturePath) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            this.texturePath = texturePath;
-            IntBuffer w = stack.mallocInt(1);
-            IntBuffer h = stack.mallocInt(1);
-            IntBuffer channels = stack.mallocInt(1);
-
-            ByteBuffer buf = stbi_load(texturePath, w, h, channels, 4);
-            if (buf == null) {
-                throw new RuntimeException("Image file [" + texturePath + "] not loaded: " + stbi_failure_reason());
-            }
-
-            int width = w.get();
-            int height = h.get();
-
+=== "无注释"
+    ```java
+    package org.lwjglb.engine.graph;
+    
+    import org.lwjgl.system.MemoryStack;
+    import java.nio.*;
+    import static org.lwjgl.opengl.GL30.*;
+    import static org.lwjgl.stb.STBImage.*;
+    
+    public class Texture {
+        private int textureId;
+        private String texturePath;
+    
+        public Texture(int width, int height, ByteBuffer buf) {
+            this.texturePath = "";
             generateTexture(width, height, buf);
-
-            stbi_image_free(buf);
+        }
+    
+        public Texture(String texturePath) {
+            try (MemoryStack stack = MemoryStack.stackPush()) {
+                this.texturePath = texturePath;
+                IntBuffer w = stack.mallocInt(1);
+                IntBuffer h = stack.mallocInt(1);
+                IntBuffer channels = stack.mallocInt(1);
+    
+                ByteBuffer buf = stbi_load(texturePath, w, h, channels, 4);
+                if (buf == null) {
+                    throw new RuntimeException("Image file [" + texturePath + "] not loaded: " + stbi_failure_reason());
+                }
+    
+                int width = w.get();
+                int height = h.get();
+    
+                generateTexture(width, height, buf);
+    
+                stbi_image_free(buf);
+            }
+        }
+    
+        public void bind() {
+            glBindTexture(GL_TEXTURE_2D, textureId);
+        }
+    
+        public void cleanup() {
+            glDeleteTextures(textureId);
+        }
+    
+        private void generateTexture(int width, int height, ByteBuffer buf) {
+            textureId = glGenTextures();
+    
+            glBindTexture(GL_TEXTURE_2D, textureId);
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+                    GL_RGBA, GL_UNSIGNED_BYTE, buf);
+            glGenerateMipmap(GL_TEXTURE_2D);
+        }
+    
+        public String getTexturePath() {
+            return texturePath;
         }
     }
+    ```
 
-    public void bind() {
-        glBindTexture(GL_TEXTURE_2D, textureId);
+=== "有注释"
+    ```java
+    package org.lwjglb.engine.graph;
+    
+    import org.lwjgl.system.MemoryStack;
+    import java.nio.*;
+    import static org.lwjgl.opengl.GL30.*;
+    import static org.lwjgl.stb.STBImage.*;
+    
+    public class Texture {
+        private int textureId;
+        private String texturePath;
+        
+        public Texture(int width, int height, ByteBuffer buf) {
+            this.texturePath = "";//路径
+            generateTexture(width, height, buf);//生成纹理
+        }
+    
+        
+        public Texture(String texturePath) {
+            try (MemoryStack stack = MemoryStack.stackPush()) {
+                this.texturePath = texturePath;
+                //分配缓冲区存储图片宽、高、通道数
+                IntBuffer w = stack.mallocInt(1);
+                IntBuffer h = stack.mallocInt(1);
+                IntBuffer channels = stack.mallocInt(1);
+    
+                //加载图片到ByteBuffer（强制 RGBA 格式）
+                ByteBuffer buf = stbi_load(texturePath, w, h, channels, 4);
+                if (buf == null) {
+                    throw new RuntimeException("Image file [" + texturePath + "] not loaded: " + stbi_failure_reason());
+                }
+    
+                int width = w.get();
+                int height = h.get();
+    
+                generateTexture(width, height, buf);//生成纹理
+    
+                stbi_image_free(buf);//释放stb缓存
+            }
+        }
+    
+        public void bind() {
+            glBindTexture(GL_TEXTURE_2D, textureId);//纹理绑定
+        }
+    
+        public void cleanup() {
+            glDeleteTextures(textureId);
+        }
+    
+        private void generateTexture(int width, int height, ByteBuffer buf) {
+            textureId = glGenTextures();
+    
+            glBindTexture(GL_TEXTURE_2D, textureId);
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            //上传纹理数据到GPU
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+                    GL_RGBA, GL_UNSIGNED_BYTE, buf);
+            glGenerateMipmap(GL_TEXTURE_2D);
+        }
+    
+        public String getTexturePath() {
+            return texturePath;
+        }
     }
-
-    public void cleanup() {
-        glDeleteTextures(textureId);
-    }
-
-    private void generateTexture(int width, int height, ByteBuffer buf) {
-        textureId = glGenTextures();
-
-        glBindTexture(GL_TEXTURE_2D, textureId);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
-                GL_RGBA, GL_UNSIGNED_BYTE, buf);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-
-    public String getTexturePath() {
-        return texturePath;
-    }
-}
-```
+    ```
 
 接下来我们创建纹理缓存。由于模型经常重用相同纹理，为避免重复加载，我们将已加载的纹理缓存起来。这由`TextureCache`类控制：
 
-```java
-package org.lwjglb.engine.graph;
-
-import java.util.*;
-
-public class TextureCache {
-    public static final String DEFAULT_TEXTURE = "resources/models/default/default_texture.png";
-
-    private Map<String, Texture> textureMap;
-
-    public TextureCache() {
-        textureMap = new HashMap<>();
-        textureMap.put(DEFAULT_TEXTURE, new Texture(DEFAULT_TEXTURE));
-    }
-
-    public void cleanup() {
-        textureMap.values().forEach(Texture::cleanup);
-    }
-
-    public Texture createTexture(String texturePath) {
-        return textureMap.computeIfAbsent(texturePath, Texture::new);
-    }
-
-    public Texture getTexture(String texturePath) {
-        Texture texture = null;
-        if (texturePath != null) {
-            texture = textureMap.get(texturePath);
+=== "无注释"
+    ```java
+    package org.lwjglb.engine.graph;
+    
+    import java.util.*;
+    
+    public class TextureCache {
+        public static final String DEFAULT_TEXTURE = "resources/models/default/default_texture.png";
+    
+        private Map<String, Texture> textureMap;
+    
+        public TextureCache() {
+            textureMap = new HashMap<>();
+            textureMap.put(DEFAULT_TEXTURE, new Texture(DEFAULT_TEXTURE));
         }
-        if (texture == null) {
-            texture = textureMap.get(DEFAULT_TEXTURE);
+    
+        public void cleanup() {
+            textureMap.values().forEach(Texture::cleanup);
         }
-        return texture;
+    
+        public Texture createTexture(String texturePath) {
+            return textureMap.computeIfAbsent(texturePath, Texture::new);
+        }
+    
+        public Texture getTexture(String texturePath) {
+            Texture texture = null;
+            if (texturePath != null) {
+                texture = textureMap.get(texturePath);
+            }
+            if (texture == null) {
+                texture = textureMap.get(DEFAULT_TEXTURE);
+            }
+            return texture;
+        }
     }
-}
-```
+    ```
+
+=== "有注释"
+    ```java
+    package org.lwjglb.engine.graph;
+
+    import java.util.*;
+    
+    public class TextureCache {
+        public static final String DEFAULT_TEXTURE = "resources/models/default/default_texture.png";
+    
+        private Map<String, Texture> textureMap;
+    
+        public TextureCache() {
+            textureMap = new HashMap<>();
+            textureMap.put(DEFAULT_TEXTURE, new Texture(DEFAULT_TEXTURE));
+        }
+    
+        public void cleanup() {
+            textureMap.values().forEach(Texture::cleanup);
+        }
+    
+        public Texture createTexture(String texturePath) {
+            return textureMap.computeIfAbsent(texturePath, Texture::new);
+        }
+    
+        public Texture getTexture(String texturePath) {
+            Texture texture = null;
+            if (texturePath != null) {
+                texture = textureMap.get(texturePath);
+            }
+            if (texture == null) {
+                texture = textureMap.get(DEFAULT_TEXTURE);
+            }
+            return texture;
+        }
+    }
+    ```
 
 现在我们需要修改模型定义方式以支持纹理。为此，并准备加载更复杂的模型，我们引入新的`Material`类。这个类将保存纹理路径和`Mesh`实例列表。因此，`Model`实例将与`Material`列表而非`Mesh`直接关联。
 
@@ -265,7 +373,7 @@ public class Mesh {
 }
 ```
 
-## 使用纹理（Using the textures）
+## 使用纹理
 
 现在我们需要在着色器中使用纹理。顶点着色器中我们修改了第二个输入参数（现在它是`vec2`类型）。片段着色器中使用纹理坐标通过`sampler2D`统一变量从纹理采样颜色。
 
