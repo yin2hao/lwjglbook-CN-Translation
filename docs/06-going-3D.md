@@ -6,7 +6,7 @@
 
 ## 模型与实体
 
-首先让我们定义3D模型的概念。此前我们一直在处理**网格**（Mesh，即顶点的集合）。模型则是将顶点、颜色、纹理和材质组合在一起的结构体。一个模型可能由多个网格组成，并可以被多个游戏实体共用。游戏实体代表玩家、敌人、障碍物等任何3D场景中的元素。本书中我们假定实体总是与模型相关联（尽管你可以有不参与渲染的无模型实体）。实体包含特定数据（如位置信息），这些数据在渲染时需要使用。稍后你会看到，我们首先获取模型数据，然后绘制与该模型关联的实体。这种设计出于效率考虑——由于多个实体可以共享同一个模型，最好先设置模型共有的元素，再处理每个实体特有的数据。
+首先让我们定义3D模型的概念。此前我们一直在处理网格。模型则是将顶点、颜色、纹理和材质组合在一起的结构体。一个模型可能由多个网格组成，并可以被多个游戏实体共用。游戏实体代表玩家、敌人、障碍物等任何3D场景中的元素。本书中我们假定实体总是与模型相关联（尽管你可以有不参与渲染的无模型实体）。实体包含特定数据（如位置信息），这些数据在渲染时需要使用。稍后你会看到，我们首先获取模型数据，然后绘制与该模型关联的实体。这种设计出于效率考虑——由于多个实体可以共享同一个模型，最好先设置模型共有的元素，再处理每个实体特有的数据。
 
 表示模型的类名为`Model`，定义如下：
 
@@ -116,72 +116,143 @@ $$
 旋转矩阵更为复杂。但要记住，它可以通过三个单轴旋转矩阵相乘构造，或通过应用四元数（稍后详述）来实现。
 
 `Entity`类定义如下：
-```java
-package org.lwjglb.engine.scene;
 
-import org.joml.*;
-
-public class Entity {
-
-    private final String id;
-    private final String modelId;
-    private Matrix4f modelMatrix;
-    private Vector3f position;
-    private Quaternionf rotation;
-    private float scale;
+=== "无注释"
+    ```java
+    package org.lwjglb.engine.scene;
     
-    public Entity(String id, String modelId) {
-        this.id = id;
-        this.modelId = modelId;
-        modelMatrix = new Matrix4f();
-        position = new Vector3f();
-        rotation = new Quaternionf();
-        scale = 1;
+    import org.joml.*;
+    
+    public class Entity {
+    
+        private final String id;
+        private final String modelId;
+        private Matrix4f modelMatrix;
+        private Vector3f position;
+        private Quaternionf rotation;
+        private float scale;
+        
+        public Entity(String id, String modelId) {
+            this.id = id;
+            this.modelId = modelId;
+            modelMatrix = new Matrix4f();
+            position = new Vector3f();
+            rotation = new Quaternionf();
+            scale = 1;
+        }
+    
+        public String getId() {
+            return id;
+        }
+    
+        public String getModelId() {
+            return modelId;
+        }
+    
+        public Matrix4f getModelMatrix() {
+            return modelMatrix;
+        }
+    
+        public Vector3f getPosition() {
+            return position;
+        }
+    
+        public Quaternionf getRotation() {
+            return rotation;
+        }
+    
+        public float getScale() {
+            return scale;
+        }
+    
+        public final void setPosition(float x, float y, float z) {
+        position.x = x;
+        position.y = y;
+        position.z = z;
+        }
+    
+        public void setRotation(float x, float y, float z, float angle) {
+            this.rotation.fromAxisAngleRad(x, y, z, angle);
+        }
+    
+        public void setScale(float scale) {
+            this.scale = scale;
+        }
+    
+        public void updateModelMatrix() {
+            modelMatrix.translationRotateScale(position, rotation, scale);
+        }
     }
+    ```
 
-    public String getId() {
-        return id;
+=== "有注释"
+    ```java
+    package org.lwjglb.engine.scene;
+    
+    import org.joml.*;
+    
+    public class Entity {
+    
+        private final String id;
+        private final String modelId;//关联的模型资源 ID
+        private Matrix4f modelMatrix;//最终的模型变换矩阵（组合了位置、旋转、缩放）
+        private Vector3f position;//3D位置（Vector3f）
+        private Quaternionf rotation;//四元数旋转（Quaternionf，比欧拉角更稳定）
+        private float scale;//统一缩放值（float）
+        
+        public Entity(String id, String modelId) {
+            this.id = id;
+            this.modelId = modelId;
+            modelMatrix = new Matrix4f();
+            position = new Vector3f();
+            rotation = new Quaternionf();
+            scale = 1;
+        }
+    
+        public String getId() {
+            return id;
+        }
+    
+        public String getModelId() {
+            return modelId;
+        }
+    
+        public Matrix4f getModelMatrix() {
+            return modelMatrix;
+        }
+    
+        public Vector3f getPosition() {
+            return position;
+        }
+    
+        public Quaternionf getRotation() {
+            return rotation;
+        }
+    
+        public float getScale() {
+            return scale;
+        }
+    
+        public final void setPosition(float x, float y, float z) {
+        position.x = x;
+        position.y = y;
+        position.z = z;
+        }
+    
+        public void setRotation(float x, float y, float z, float angle) {
+            this.rotation.fromAxisAngleRad(x, y, z, angle);
+        }
+    
+        public void setScale(float scale) {
+            this.scale = scale;
+        }
+    
+        //更新实体的模型矩阵，将实体的 位置、旋转和缩放组合成一个最终的4x4变换矩阵
+        public void updateModelMatrix() {
+            modelMatrix.translationRotateScale(position, rotation, scale);
+        }
     }
-
-    public String getModelId() {
-        return modelId;
-    }
-
-    public Matrix4f getModelMatrix() {
-        return modelMatrix;
-    }
-
-    public Vector3f getPosition() {
-        return position;
-    }
-
-    public Quaternionf getRotation() {
-        return rotation;
-    }
-
-    public float getScale() {
-        return scale;
-    }
-
-    public final void setPosition(float x, float y, float z) {
-    position.x = x;
-    position.y = y;
-    position.z = z;
-    }
-
-    public void setRotation(float x, float y, float z, float angle) {
-        this.rotation.fromAxisAngleRad(x, y, z, angle);
-    }
-
-    public void setScale(float scale) {
-        this.scale = scale;
-    }
-
-    public void updateModelMatrix() {
-        modelMatrix.translationRotateScale(position, rotation, scale);
-    }
-}
-```
+    ```
 
 `Model`实例也拥有唯一标识符，并定义了位置（3分量向量）、缩放（单个浮点数，假设三个轴均匀缩放）和旋转（四元数）属性。我们本可以存储俯仰角（pitch）、偏航角（yaw）和滚转角（roll）来表示旋转，但这里使用了你可能没听说过的数学工具——四元数（quaternion）。使用欧拉角（Euler angles）的问题是万向节锁（gimbal lock）。当应用这些旋转角时，我们可能最终对齐两个旋转轴，失去自由度，导致无法正确旋转物体。四元数没有这个问题。与其让我拙劣地解释四元数是什么，不如推荐一篇优秀的[博客文章](https://www.3dgep.com/understanding-quaternions/)来解释相关概念。如果你不想深入了解，只需记住它们可以表达旋转而不会出现欧拉角的问题。
 
@@ -298,21 +369,73 @@ void main() {
 
 ```java
 public class Main implements IAppLogic {
+
+    private Entity cubeEntity;
+    private Vector4f displInc = new Vector4f();
+    private float rotation;
+
+    public static void main(String[] args) {
+        ...
+        Engine gameEng = new Engine("chapter-06", new Window.WindowOptions(), main);
+        ...
+    }
+    ...
+    @Override
     public void init(Window window, Scene scene, Render render) {
-        float[] positions = new float[]{ /* 立方体顶点坐标 */ };
-        float[] colors = new float[]{ /* 顶点颜色 */ };
-        int[] indices = new int[]{ /* 立方体面索引 */ };
-        
+        float[] positions = new float[]{
+                // VO
+                -0.5f, 0.5f, 0.5f,
+                // V1
+                -0.5f, -0.5f, 0.5f,
+                // V2
+                0.5f, -0.5f, 0.5f,
+                // V3
+                0.5f, 0.5f, 0.5f,
+                // V4
+                -0.5f, 0.5f, -0.5f,
+                // V5
+                0.5f, 0.5f, -0.5f,
+                // V6
+                -0.5f, -0.5f, -0.5f,
+                // V7
+                0.5f, -0.5f, -0.5f,
+        };
+        float[] colors = new float[]{
+                0.5f, 0.0f, 0.0f,
+                0.0f, 0.5f, 0.0f,
+                0.0f, 0.0f, 0.5f,
+                0.0f, 0.5f, 0.5f,
+                0.5f, 0.0f, 0.0f,
+                0.0f, 0.5f, 0.0f,
+                0.0f, 0.0f, 0.5f,
+                0.0f, 0.5f, 0.5f,
+        };
+        int[] indices = new int[]{
+                // Front face
+                0, 1, 3, 3, 1, 2,
+                // Top Face
+                4, 0, 3, 5, 4, 3,
+                // Right face
+                3, 2, 7, 5, 3, 7,
+                // Left face
+                6, 1, 0, 6, 0, 4,
+                // Bottom face
+                2, 1, 6, 2, 6, 7,
+                // Back face
+                7, 6, 4, 7, 4, 5,
+        };
         List<Mesh> meshList = new ArrayList<>();
-        meshList.add(new Mesh(positions, colors, indices));
-        
-        Model model = new Model("cube-model", meshList);
+        Mesh mesh = new Mesh(positions, colors, indices);
+        meshList.add(mesh);
+        String cubeModelId = "cube-model";
+        Model model = new Model(cubeModelId, meshList);
         scene.addModel(model);
-        
-        cubeEntity = new Entity("cube-entity", "cube-model");
+
+        cubeEntity = new Entity("cube-entity", cubeModelId);
         cubeEntity.setPosition(0, 0, -2);
         scene.addEntity(cubeEntity);
     }
+    ...
 }
 ```
 
@@ -326,10 +449,38 @@ public class Main implements IAppLogic {
 
 ```java
 public class Main implements IAppLogic {
+    ...
     public void input(Window window, Scene scene, long diffTimeMillis) {
-        // 按键检测和位置/缩放更新逻辑
+        displInc.zero();
+        if (window.isKeyPressed(GLFW_KEY_UP)) {
+            displInc.y = 1;
+        } else if (window.isKeyPressed(GLFW_KEY_DOWN)) {
+            displInc.y = -1;
+        }
+        if (window.isKeyPressed(GLFW_KEY_LEFT)) {
+            displInc.x = -1;
+        } else if (window.isKeyPressed(GLFW_KEY_RIGHT)) {
+            displInc.x = 1;
+        }
+        if (window.isKeyPressed(GLFW_KEY_A)) {
+            displInc.z = -1;
+        } else if (window.isKeyPressed(GLFW_KEY_Q)) {
+            displInc.z = 1;
+        }
+        if (window.isKeyPressed(GLFW_KEY_Z)) {
+            displInc.w = -1;
+        } else if (window.isKeyPressed(GLFW_KEY_X)) {
+            displInc.w = 1;
+        }
+
+        displInc.mul(diffTimeMillis / 1000.0f);
+
+        Vector3f entityPos = cubeEntity.getPosition();
+        cubeEntity.setPosition(displInc.x + entityPos.x, displInc.y + entityPos.y, displInc.z + entityPos.z);
+        cubeEntity.setScale(cubeEntity.getScale() + displInc.w);
         cubeEntity.updateModelMatrix();
     }
+    ...
 }
 ```
 
@@ -337,11 +488,16 @@ public class Main implements IAppLogic {
 
 ```java
 public class Main implements IAppLogic {
+    ...
     public void update(Window window, Scene scene, long diffTimeMillis) {
         rotation += 1.5;
+        if (rotation > 360) {
+            rotation = 0;
+        }
         cubeEntity.setRotation(1, 1, 1, (float) Math.toRadians(rotation));
         cubeEntity.updateModelMatrix();
     }
+    ...
 }
 ```
 
@@ -354,11 +510,17 @@ public class Main implements IAppLogic {
 这可以在`Render`类的构造函数中完成：
 
 ```java
-public class Render {
-    public Render() {
-        GL.createCapabilities();
-        glEnable(GL_DEPTH_TEST);
+public class Main implements IAppLogic {
+    ...
+    public void update(Window window, Scene scene, long diffTimeMillis) {
+        rotation += 1.5;
+        if (rotation > 360) {
+            rotation = 0;
+        }
+        cubeEntity.setRotation(1, 1, 1, (float) Math.toRadians(rotation));
+        cubeEntity.updateModelMatrix();
     }
+    ...
 }
 ```
 
