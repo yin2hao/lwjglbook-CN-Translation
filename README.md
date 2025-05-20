@@ -9,7 +9,11 @@
 本翻译仓库fork自[mouse0w0](https://github.com/mouse0w0/lwjglbook-CN-Translation)(以下称为原译文)
 
 ## 本仓库介绍
-原译文对原文进行了详细的翻译。但我在学习时发现原译文落后于原文的更改，且章节结构与现原文不同，故创建此仓库进行翻译
+~~原译文对原文进行了详细的翻译。但我在学习时发现原译文落后于原文的更改，且章节结构与现原文不同，故创建此仓库进行翻译~~
+
+方便学习时修改代码，添加笔记,同时练习git基础操作
+
+现今各类AI翻译插件已非常成熟，建议直接查看[原文](https://legacy.gitbook.com/book/lwjglgamedev/3d-game-development-with-lwjgl/details)
 
 ### 本仓库与原译文的区别
 * 使用AI重新逐行翻译了原文
