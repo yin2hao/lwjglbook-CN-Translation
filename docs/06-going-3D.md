@@ -341,12 +341,13 @@ public class SceneRender {
             }
         });
     }
-  glBindVertexArray(0);
-  shaderProgram.unbind();
+    glBindVertexArray(0);
+    shaderProgram.unbind();
  }
  ...
 }
 ```
+如你所见，我们会先遍历模型集合，然后遍历每个模型的网格数据，绑定对应的VAO后获取关联的实体对象。在调用绘制指令前，需要为每个实体正确填充`modelMatrix`统一变量值。
 
 顶点着色器修改为使用`modelMatrix`统一变量：
 
@@ -519,15 +520,12 @@ public class Main implements IAppLogic {
 这可以在`Render`类的构造函数中完成：
 
 ```java
-public class Main implements IAppLogic {
+public class Render {
     ...
-    public void update(Window window, Scene scene, long diffTimeMillis) {
-        rotation += 1.5;
-        if (rotation > 360) {
-            rotation = 0;
-        }
-        cubeEntity.setRotation(1, 1, 1, (float) Math.toRadians(rotation));
-        cubeEntity.updateModelMatrix();
+    public Render() {
+        GL.createCapabilities();
+        glEnable(GL_DEPTH_TEST);
+        ...
     }
     ...
 }
