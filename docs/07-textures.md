@@ -607,4 +607,4 @@ public class Main implements IAppLogic {
 
 ![带纹理的立方体](_static/07/cube_with_texture.png)
 
-[下一章](../chapter-08/chapter-08.md)
+[下一章](./08-camera.md)

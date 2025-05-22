@@ -64,14 +64,14 @@ public class Model {
 
 世界矩阵计算公式如下（顺序很重要，因为矩阵乘法不满足交换律）：
 $$
-世界矩阵 = [平移矩阵] \times [旋转矩阵] \times [缩放矩阵]
+世界矩阵 = [平移矩阵\rbrack  \cdot \lbrack旋转矩阵\rbrack  \cdot \lbrack缩放矩阵]
 $$
 
 如果我们在变换矩阵中包含投影矩阵，则如下：
 $$
 \begin{array}{lcl}
-变换矩阵 & = & [投影矩阵] \times [平移矩阵] \times [旋转矩阵] \times [缩放矩阵] \\
- & = & [投影矩阵] \times [世界矩阵]
+变换矩阵 & = & \lbrack投影矩阵\rbrack  \cdot \lbrack平移矩阵\rbrack  \cdot \lbrack旋转矩阵\rbrack  \cdot \lbrack缩放矩阵\rbrack \\
+ & = & \lbrack投影矩阵\rbrack  \cdot \lbrack世界矩阵\rbrack
 \end{array}
 $$
 

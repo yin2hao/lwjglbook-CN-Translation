@@ -26,8 +26,8 @@
 
 $$
 \begin{array}{lcl}
-Transf & = & \lbrack ProjMatrix \rbrack \cdot \lbrack TranslationMatrix \rbrack \cdot \lbrack  RotationMatrix \rbrack \cdot \lbrack  ScaleMatrix \rbrack \\ 
- & = & \lbrack   ProjMatrix \rbrack  \cdot \lbrack  WorldMatrix \rbrack
+变换矩阵 & = & \lbrack投影矩阵\rbrack  \cdot \lbrack平移矩阵\rbrack  \cdot \lbrack旋转矩阵\rbrack  \cdot \lbrack缩放矩阵\rbrack \\
+& = & \lbrack投影矩阵\rbrack  \cdot \lbrack世界矩阵\rbrack
 \end{array}
 $$
 
@@ -35,8 +35,8 @@ $$
 
 $$
 \begin{array}{lcl}
-Transf & = & \lbrack  ProjMatrix \rbrack \cdot \lbrack  ViewMatrix \rbrack \cdot \lbrack  TranslationMatrix \rbrack \cdot \lbrack  RotationMatrix \rbrack \cdot \lbrack ScaleMatrix \rbrack \\
-  & = & \lbrack ProjMatrix \rbrack \cdot \lbrack  ViewMatrix \rbrack \cdot \lbrack  WorldMatrix \rbrack 
+变换矩阵 & = & \lbrack投影矩阵\rbrack  \cdot \lbrack视图矩阵\rbrack  \cdot \lbrack平移矩阵\rbrack  \cdot \lbrack旋转矩阵\rbrack  \cdot \lbrack缩放矩阵\rbrack \\
+& = & \lbrack投影矩阵\rbrack  \cdot \lbrack视图矩阵\rbrack  \cdot \lbrack世界矩阵\rbrack
 \end{array}
 $$
 
