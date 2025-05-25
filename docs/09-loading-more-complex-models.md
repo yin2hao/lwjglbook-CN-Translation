@@ -1,12 +1,12 @@
-# 第09章 - 加载复杂模型：**Assimp**（Loading more complex models: Assimp）
+# 第09章 - 加载复杂模型：Assimp（Loading more complex models: Assimp）
 
-为了开发游戏，能够加载不同格式的复杂3D模型至关重要。为某些格式编写解析器需要大量工作，即使仅支持单一格式也可能耗时。幸运的是，[**Assimp**](http://assimp.sourceforge.net/)库已可用于解析多种常见3D格式。这是一个C/C++库，能加载多种格式的静态和动态模型。**轻量级Java游戏库**（Lightweight Java Game Library，简称LWJGL）提供了从Java代码调用的绑定。本章将介绍其使用方法。
+为了开发游戏，能够加载不同格式的复杂3D模型至关重要。为某些格式编写解析器需要大量工作，即使仅支持单一格式也可能耗时。幸运的是，[**Assimp**](http://assimp.sourceforge.net/)库已可用于解析多种常见3D格式。这是一个C/C++库，能加载多种格式的静态和动态模型。轻量级Java游戏库提供了从Java代码调用的绑定。本章将介绍其使用方法。
 
 本章完整源代码可在[此处](https://github.com/lwjglgamedev/lwjglbook/tree/main/chapter-09)找到。
 
-## 模型加载器（Model loader）
+## 模型加载器
 
-首先在项目的pom.xml中添加**Assimp**的Maven依赖。我们需要添加编译时和运行时依赖。
+首先在项目的pom.xml中添加Assimp的Maven依赖。我们需要添加编译时和运行时依赖。
 
 ```xml
 <dependency>
@@ -23,7 +23,7 @@
 </dependency>
 ```
 
-设置依赖后，我们将创建一个名为`ModelLoader`的新类，用于通过**Assimp**加载模型。该类定义了两个静态公共方法：
+设置依赖后，我们将创建一个名为`ModelLoader`的新类，用于通过Assimp加载模型。该类定义了两个静态公共方法：
 
 ```java
 package org.lwjglb.engine.scene;
@@ -65,7 +65,7 @@ public class ModelLoader {
 
 * `modelId`：要加载模型的唯一标识符。
 
-* `modelPath`：模型文件所在路径。这是常规文件路径，不是CLASSPATH相对路径，因为**Assimp**可能需要加载其他文件，并可能使用与`modelPath`相同的基础路径（例如，Wavefront OBJ文件的材质文件）。如果将资源嵌入JAR文件中，**Assimp**将无法导入，因此必须是文件系统路径。加载纹理时，我们将使用`modelPath`获取模型所在的基础目录以加载纹理（覆盖模型中定义的任何路径）。这样做是因为某些模型包含开发时本地文件夹的绝对路径，这些路径显然无法访问。
+* `modelPath`：模型文件所在路径。这是常规文件路径，不是CLASSPATH相对路径，因为Assimp可能需要加载其他文件，并可能使用与`modelPath`相同的基础路径（例如，Wavefront OBJ文件的材质文件）。如果将资源嵌入JAR文件中，Assimp将无法导入，因此必须是文件系统路径。加载纹理时，我们将使用`modelPath`获取模型所在的基础目录以加载纹理（覆盖模型中定义的任何路径）。这样做是因为某些模型包含开发时本地文件夹的绝对路径，这些路径显然无法访问。
 
 * `textureCache`：对纹理缓存的引用，以避免多次加载同一纹理。
 
@@ -83,7 +83,7 @@ public class ModelLoader {
 
 * `aiProcess_PreTransformVertices`：此标志对加载的数据执行一些变换，使模型位于原点，并将坐标校正为匹配OpenGL坐标系。如果遇到模型旋转问题，请确保使用此标志。重要提示：如果模型使用动画，请勿使用此标志，此标志将删除动画信息。
 
-还有许多其他标志可用，可以在LWJGL或**Assimp**文档中查看。
+还有许多其他标志可用，可以在LWJGL或Assimp文档中查看。
 
 让我们回到第二个构造函数。首先调用`aiImportFile`方法以加载具有所选标志的模型。
 
@@ -147,9 +147,9 @@ public class ModelLoader {
 }
 ```
 
-我们处理模型中包含的材质。材质定义了组成模型的**网格**（Mesh）使用的颜色和纹理。然后我们处理不同的网格。一个模型可以定义多个网格，每个网格可以使用模型定义的一种材质。这就是为什么我们在材质之后处理网格并链接到它们，以避免在渲染时重复绑定调用。
+我们处理模型中包含的材质。材质定义了组成模型的网格使用的颜色和纹理。然后我们处理不同的网格。一个模型可以定义多个网格，每个网格可以使用模型定义的一种材质。这就是为什么我们在材质之后处理网格并链接到它们，以避免在渲染时重复绑定调用。
 
-如果检查上面的代码，可能会看到许多对**Assimp**库的调用返回`PointerBuffer`实例。可以将它们视为C指针，它们只是指向包含数据的内存区域。需要提前知道它们保存的数据类型才能处理它们。对于材质，我们迭代该缓冲区创建`AIMaterial`类的实例。在第二种情况下，我们迭代保存网格数据的缓冲区创建`AIMesh`类的实例。
+如果检查上面的代码，可能会看到许多对Assimp库的调用返回`PointerBuffer`实例。可以将它们视为C指针，它们只是指向包含数据的内存区域。需要提前知道它们保存的数据类型才能处理它们。对于材质，我们迭代该缓冲区创建`AIMaterial`类的实例。在第二种情况下，我们迭代保存网格数据的缓冲区创建`AIMesh`类的实例。
 
 让我们检查`processMaterial`方法。
 
@@ -208,7 +208,7 @@ public class ModelLoader {
 }
 ```
 
-**网格**（Mesh）由一组顶点位置、纹理坐标和**索引缓冲**（Index Buffer）定义。每个元素在`processVertices`、`processTextCoords`和`processIndices`方法中处理。处理完所有数据后，我们检查是否定义了纹理坐标。如果没有，我们仅分配一组纹理坐标为0.0f以确保**顶点数组对象**（Vertex Array Object，简称VAO）的一致性。
+网格由一组顶点位置、纹理坐标和**索引缓冲**（Index Buffer）定义。每个元素在`processVertices`、`processTextCoords`和`processIndices`方法中处理。处理完所有数据后，我们检查是否定义了纹理坐标。如果没有，我们仅分配一组纹理坐标为0.0f以确保顶点数组对象的一致性。
 
 `processXXX`方法非常简单，它们只是在`AIMesh`实例上调用相应的方法，返回所需数据并将其存储到数组中：
 
@@ -263,7 +263,7 @@ public class ModelLoader {
 
 如果想查看更高效的方法示例，即直接将缓冲区传递给OpenGL，可以查看此[示例](https://github.com/LWJGL/lwjgl3-demos/blob/master/src/org/lwjgl/demo/opengl/assimp/WavefrontObjDemo.java)。
 
-## 使用模型（Using the models）
+## 使用模型
 
 我们需要修改`Material`类以添加对漫反射颜色的支持：
 
@@ -315,7 +315,7 @@ public class SceneRender {
 }
 ```
 
-可以看到，我们为**统一变量**（Uniforms）使用了一个带有`.`的奇怪名称。这是因为我们将在**着色器**（Shader）中使用结构体。通过结构体，我们可以将多个类型组合成一个组合类型。可以在片段着色器中看到这一点：
+可以看到，我们为统一变量使用了一个带有`.`的奇怪名称。这是因为我们将在着色器中使用结构体。通过结构体，我们可以将多个类型组合成一个组合类型。可以在片段着色器中看到这一点：
 
 ```glsl
 #version 330

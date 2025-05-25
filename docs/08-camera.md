@@ -279,24 +279,44 @@ public class Engine {
 
 现在我们可以修改顶点着色器以使用摄像机的视图矩阵，正如你可能猜到的，它将作为统一变量传递。
 
-```glsl
-#version 330
+=== "本章的顶点着色器"
+    ```glsl
+    #version 330
+    
+    layout (location=0) in vec3 position;
+    layout (location=1) in vec2 texCoord;
+    
+    out vec2 outTextCoord;
+    
+    uniform mat4 projectionMatrix;
+    uniform mat4 viewMatrix;
+    uniform mat4 modelMatrix;
+    
+    void main()
+    {
+        gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+        outTextCoord = texCoord;
+    }
+    ```
 
-layout (location=0) in vec3 position;
-layout (location=1) in vec2 texCoord;
-
-out vec2 outTextCoord;
-
-uniform mat4 projectionMatrix;
-uniform mat4 viewMatrix;
-uniform mat4 modelMatrix;
-
-void main()
-{
-    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
-    outTextCoord = texCoord;
-}
-```
+=== "之前的顶点着色器"
+    ```glsl
+    #version 330
+    
+    layout (location=0) in vec3 position;
+    layout (location=1) in vec2 texCoord;
+    
+    out vec2 outTextCoord;
+    
+    uniform mat4 projectionMatrix;
+    uniform mat4 modelMatrix;
+    
+    void main()
+    {
+        gl_Position = projectionMatrix * modelMatrix * vec4(position, 1.0);
+        outTextCoord = texCoord;
+    }
+    ```
 
 因此，下一步是在`SceneRender`类中正确创建统一变量，并在每次`render`调用中更新其值：
 
