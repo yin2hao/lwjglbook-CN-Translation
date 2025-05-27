@@ -4,14 +4,14 @@
 
 您可以在[这里](https://github.com/lwjglgamedev/lwjglbook/tree/main/chapter-11)找到本章的完整源代码。
 
-## 一些概念（Some concepts）
+## 一些概念
 
 在我们开始之前，让我们定义一些光照类型：
 
-* **点光源**（Point light）：这种类型的光照模拟了从空间中的一个点向所有方向均匀发射的光源。
-* **聚光灯**（Spot light）：这种类型的光照模拟了从空间中的一个点发射的光源，但不是向所有方向发射，而是限制在一个圆锥体内。
-* **方向光**（Directional light）：这种类型的光照模拟了我们从太阳接收到的光照，3D空间中的所有物体都被来自特定方向的平行光线照射。无论物体是近还是远，所有光线都以相同的角度照射物体。
-* **环境光**（Ambient light）：这种类型的光照来自空间中的各个地方，并以相同的方式照亮所有物体。
+* **点光源**：这种类型的光照模拟了从空间中的一个点向所有方向均匀发射的光源。
+* **聚光灯**：这种类型的光照模拟了从空间中的一个点发射的光源，但不是向所有方向发射，而是限制在一个圆锥体内。
+* **方向光**：这种类型的光照模拟了我们从太阳接收到的光照，3D空间中的所有物体都被来自特定方向的平行光线照射。无论物体是近还是远，所有光线都以相同的角度照射物体。
+* **环境光**：这种类型的光照来自空间中的各个地方，并以相同的方式照亮所有物体。
 
 ![Light types](_static/11/light_types.png)
 
@@ -39,7 +39,7 @@ $$L = A + D + S$$
 
 $$L = A * textureColour + D * textureColour + S * textureColour$$
 
-## 法线（Normals）
+## 法线
 
 法线是处理光照时的关键元素。让我们先定义它。平面的法线是垂直于该平面的向量，其长度等于一。
 
@@ -53,7 +53,7 @@ $$L = A * textureColour + D * textureColour + S * textureColour$$
 
 ![Vertex normals](_static/11/vertex_normals.png)
 
-## 漫反射（Diffuse reflectance）
+## 漫反射
 
 现在让我们谈谈漫反射。这模拟了垂直于光源的表面看起来比光线以更间接角度接收的表面更亮的事实。这些物体接收到更多的光照，光照密度（让我这样称呼它）更高。
 
@@ -101,7 +101,7 @@ $$L = A * textureColour + D * textureColour + S * textureColour$$
 
 $$color = diffuseColour * lColour * diffuseFactor * intensity$$
 
-## 镜面分量（Specular component）
+## 镜面分量
 
 在考虑镜面分量之前，我们首先需要研究光照是如何反射的。当光线照射到表面时，一部分被吸收，另一部分被反射，如果您还记得物理课上学到的，反射是光线从物体上弹开。
 
@@ -135,7 +135,7 @@ $$specularFactor = specularFactor^{specularPower}$$
 
 最后，我们需要模拟材质的反射率，它也将调制反射光的强度。这将通过另一个名为reflectance的参数来完成。因此，镜面分量的颜色将是：$specularColour * lColour * reflectance * specularFactor * intensity$。
 
-## 衰减（Attenuation）
+## 衰减
 
 我们现在知道如何计算三个分量，这些分量将用于模拟带有环境光的点光源。但是我们的光照模型仍然不完整，因为物体反射的光照与光源的距离无关。也就是说，我们需要模拟光照衰减。
 
@@ -143,7 +143,7 @@ $$specularFactor = specularFactor^{specularPower}$$
 
 为了模拟衰减，我们只需要将该衰减因子乘以最终颜色。
 
-## 方向光（Directional Light）
+## 方向光
 
 方向光以平行光线照射所有物体，所有光线都来自同一方向。它模拟了距离很远但强度很高的光源，例如太阳。
 
@@ -155,7 +155,7 @@ $$specularFactor = specularFactor^{specularPower}$$
 
 ![Sun as a directional light](_static/11/sun_directional_light.png)
 git 
-## 聚光灯（Spot Light）
+## 聚光灯
 
 现在我们将实现聚光灯，它与点光源非常相似，但发射的光线被限制在一个3D圆锥体内。它模拟了从聚光灯或任何其他不向所有方向发射光线的光源发出的光线。聚光灯具有与点光源相同的属性，但增加了两个新参数：圆锥角和圆锥方向。
 
@@ -177,7 +177,7 @@ $$1 - (1-Cos(\alpha))/(1-Cos(cutOffAngle)$$
 
 （在我们的片段着色器中，我们不会有角度，但会有截止角的余弦。您可以检查上面的公式产生的数值范围从0到1，当角度等于截止角时为0，当角度为0时为1）。
 
-## 实现光照类（Implementing light classes）
+## 实现光照类
 
 让我们首先创建一组类来模拟不同类型的光照。我们将从模拟点光源的类开始：
 
@@ -494,7 +494,7 @@ public class Scene {
 }
 ```
 
-## 模型加载修改（Model loading modification）
+## 模型加载修改
 
 我们需要修改`ModelLoader`类以：
 
@@ -667,7 +667,7 @@ public class Mesh {
 }
 ```
 
-## 使用光照渲染（Render with lights）
+## 使用光照渲染
 
 现在是时候在渲染时使用光照了，让我们从着色器开始，特别是顶点着色器（`scene.vert`）：
 
@@ -1076,7 +1076,7 @@ public class UniformsMap {
 }
 ```
 
-## 光照控制（Light controls）
+## 光照控制
 
 最后一步是在`Main`类中使用光照。但是，在此之前，我们将使用Imgui创建一个GUI，以提供一些元素来控制光照参数。我们将在一个名为`LightControls`的新类中完成此操作。代码有点冗长，但非常容易理解，我们只需要设置一组属性来从GUI控件获取值，以及一个方法来绘制所需的面板和小部件。
 

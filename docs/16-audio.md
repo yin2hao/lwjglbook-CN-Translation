@@ -4,21 +4,21 @@
 
 您可以在[此处](https://github.com/lwjglgamedev/lwjglbook/tree/main/chapter-16)找到本章的完整源代码。
 
-## OpenAL（OpenAL）
+## OpenAL
 
 本章将借助 [OpenAL](https://www.openal.org "OpenAL")（Open Audio Library）来解决音频功能。OpenAL 是 OpenGL 在音频方面的对应物，它允许我们通过抽象层播放声音。该层将我们与底层音频子系统的复杂性隔离开来。除此之外，它还允许我们在 3D 场景中“渲染”声音，声音可以设置在特定位置，随距离衰减，并根据其速度进行修改（模拟[多普勒效应](https://en.wikipedia.org/wiki/Doppler_effect)）。
 
 在开始编码之前，我们需要介绍处理 OpenAL 时涉及的主要元素，它们是：
 
-* 缓冲区（Buffers）。
-* 声源（Sources）。
-* 监听器（Listener）。
+* 缓冲区。
+* 声源。
+* 监听器。
 
 缓冲区存储音频数据，例如音乐或音效。它们类似于 OpenGL 领域的纹理。OpenAL 要求音频数据采用 PCM（脉冲编码调制）格式（单声道或立体声），因此我们不能直接转储 MP3 或 OGG 文件，而需要先将其转换为 PCM。
 
 下一个元素是声源，它代表 3D 空间中的一个位置（一个点），用于发出声音。声源与一个缓冲区相关联（一次只能关联一个），并且可以通过以下属性来定义：
 
-* 位置，声源的位置（$$x$$、$$y$$ 和 $$z$$ 坐标）。顺便说一下，OpenAL 使用与 OpenGL 相同的右手**笛卡尔坐标系**（Cartesian coordinate system），因此您可以假设（为了简化起见）您的世界坐标等同于声音空间**坐标空间**（coordinate space）中的坐标。
+* 位置，声源的位置（$x$、$y$ 和 $z$ 坐标）。顺便说一下，OpenAL 使用与 OpenGL 相同的右手笛卡尔坐标系，因此您可以假设（为了简化起见）您的世界坐标等同于声音空间坐标空间中的坐标。
 * 速度，指定声源移动的速度。这用于模拟多普勒效应。
 * 增益，用于修改声音的强度（就像一个放大因子）。
 
@@ -30,7 +30,7 @@
 
 ![OpenAL concepts](_static/16/openal_concepts.png)
 
-## 实现（Implementation）
+## 实现
 
 为了使用 OpenAL，首先需要在项目的 pom.xml 中添加 maven 依赖项。我们需要添加编译时和运行时依赖项。
 

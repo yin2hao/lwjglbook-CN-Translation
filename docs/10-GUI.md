@@ -415,7 +415,9 @@ public class GuiRender {
 }
 ```
 
-我们需要更新`UniformsMap`类以添加对2D向量的支持：
+我们需要更新`UniformsMap`类以添加对2D向量的支持。
+
+后期添加:注意:这里是添加了一个重载的方法而不是修改原有的方法
 
 ```java
 public class UniformsMap {
