@@ -1,27 +1,27 @@
 # 第19章 - 延迟着色（Deferred Shading）
 
-到目前为止，我们渲染3D场景的方式称为前向渲染。我们首先渲染3D对象，然后在片段**着色器**（Shader）中应用**纹理**（Texture）和光照效果。如果我们有一个复杂的片段**着色器**（Shader）通道，其中包含许多光源和复杂效果，这种方法效率不高。此外，我们最终可能会将这些效果应用于可能由于**深度测试**（Depth Test）而被丢弃的片段（尽管如果我们启用[早期片段测试](https://www.khronos.org/opengl/wiki/Early_Fragment_Test)，情况并非完全如此）。
+到目前为止，我们渲染3D场景的方式称为前向渲染。我们首先渲染3D对象，然后在片段着色器中应用纹理和光照效果。如果我们有一个复杂的片段着色器通道，其中包含许多光源和复杂效果，这种方法效率不高。此外，我们最终可能会将这些效果应用于可能由于**深度测试**（Depth Test）而被丢弃的片段（尽管如果我们启用[早期片段测试](https://www.khronos.org/opengl/wiki/Early_Fragment_Test)，情况并非完全如此）。
 
-为了缓解上述问题，我们可以通过使用一种称为**延迟着色**（deferred shading）的技术来改变我们渲染场景的方式。使用**延迟着色**（deferred shading），我们首先将后续阶段（在片段**着色器**（Shader）中）所需的几何信息渲染到**缓冲区**（Buffers）中。片段**着色器**（Shader）所需的复杂计算被推迟到使用这些**缓冲区**（Buffers）中存储的信息的后续阶段。
+为了缓解上述问题，我们可以通过使用一种称为**延迟着色**（deferred shading）的技术来改变我们渲染场景的方式。使用**延迟着色**（deferred shading），我们首先将后续阶段（在片段着色器中）所需的几何信息渲染到缓冲区中。片段着色器所需的复杂计算被推迟到使用这些缓冲区中存储的信息的后续阶段。
 
 您可以在[此处](https://github.com/lwjglgamedev/lwjglbook/tree/main/chapter-19)找到本章的完整源代码。
 
-## 概念（Concepts）
+## 概念
 
-**延迟着色**（Deferred shading）需要执行两个渲染通道。第一个是几何体通道，我们将场景渲染到一个**缓冲区**（Buffers）中，该**缓冲区**（Buffers）将包含以下信息：
+**延迟着色**（Deferred shading）需要执行两个渲染通道。第一个是几何体通道，我们将场景渲染到一个缓冲区中，该缓冲区将包含以下信息：
 
 * 深度值。
 * 每个位置的**漫反射**（Diffuse reflectance）颜色和反射因子。
 * 每个位置的**镜面反射**（Specular reflectance）分量。
 * 每个位置的法线（也在光视图**坐标空间**（coordinate space）中）。
 
-所有这些信息都存储在一个称为**G-缓冲区**（G-Buffer）的**缓冲区**（Buffers）中。
+所有这些信息都存储在一个称为**G-缓冲区**（G-Buffer）的缓冲区中。
 
 第二个通道称为光照通道。此通道采用一个填充整个屏幕的四边形，并使用**G-缓冲区**（G-Buffer）中包含的信息为每个片段生成颜色信息。当我们执行光照通道时，**深度测试**（Depth Test）已经移除了所有不会被看到的场景数据。因此，要执行的操作数量仅限于屏幕上显示的内容。
 
-您可能会问，执行额外的渲染通道是否会提高性能。答案是取决于情况。当您有许多不同的光照通道时，通常会使用**延迟着色**（deferred shading）。在这种情况下，额外的渲染步骤通过减少片段**着色器**（Shader）中执行的操作来补偿。
+您可能会问，执行额外的渲染通道是否会提高性能。答案是取决于情况。当您有许多不同的光照通道时，通常会使用**延迟着色**（deferred shading）。在这种情况下，额外的渲染步骤通过减少片段着色器中执行的操作来补偿。
 
-## G-缓冲区（G-Buffer）
+## G-缓冲区
 
 所以让我们开始编码。我们将要做的第一项任务是为**G-缓冲区**（G-Buffer）创建一个新类。该类名为`GBuffer`，定义如下：
 
@@ -49,7 +49,7 @@ public class GBuffer {
 }
 ```
 
-该类定义了一个常量，用于表示要使用的最大**缓冲区**（Buffers）数量。**G-缓冲区**（G-Buffer）本身的标识符以及用于单个**缓冲区**（Buffers）的数组。还存储了**纹理**（Texture）的大小。
+该类定义了一个常量，用于表示要使用的最大缓冲区数量。**G-缓冲区**（G-Buffer）本身的标识符以及用于单个缓冲区的数组。还存储了纹理的大小。
 
 让我们回顾一下构造函数：
 
@@ -97,16 +97,16 @@ public class GBuffer {
 }
 ```
 
-我们做的第一件事是创建一个**帧缓冲**（Frame Buffer）。记住，**帧缓冲**（Frame Buffer）只是一个OpenGL对象，可以用来执行渲染操作，而不是渲染到屏幕。然后我们生成一组**纹理**（Texture）（4个**纹理**（Texture）），这些**纹理**（Texture）将与**帧缓冲**（Frame Buffer）关联。
+我们做的第一件事是创建一个**帧缓冲**（Frame Buffer）。记住，**帧缓冲**（Frame Buffer）只是一个OpenGL对象，可以用来执行渲染操作，而不是渲染到屏幕。然后我们生成一组纹理（4个纹理），这些纹理将与**帧缓冲**（Frame Buffer）关联。
 
-之后，我们使用for循环初始化**纹理**（Texture）。我们有以下类型：
+之后，我们使用for循环初始化纹理。我们有以下类型：
 
-* “常规**纹理**（Texture）”，将存储位置、法线、**漫反射**（Diffuse reflectance）分量等。
-* 用于存储深度**缓冲区**（Buffers）的**纹理**（Texture）。这将是我们的最后一个**纹理**（Texture）。
+* “常规纹理”，将存储位置、法线、**漫反射**（Diffuse reflectance）分量等。
+* 用于存储深度缓冲区的纹理。这将是我们的最后一个纹理。
 
-**纹理**（Texture）初始化后，我们启用它们的采样并将其附加到**帧缓冲**（Frame Buffer）。每个**纹理**（Texture）都使用一个从`GL_COLOR_ATTACHMENT0`开始的标识符附加。每个**纹理**（Texture）将该ID增加一，因此位置使用`GL_COLOR_ATTACHMENT0`附加，**漫反射**（Diffuse reflectance）分量使用`GL_COLOR_ATTACHMENT1`（即`GL_COLOR_ATTACHMENT0 + 1`），依此类推。
+纹理初始化后，我们启用它们的采样并将其附加到**帧缓冲**（Frame Buffer）。每个纹理都使用一个从`GL_COLOR_ATTACHMENT0`开始的标识符附加。每个纹理将该ID增加一，因此位置使用`GL_COLOR_ATTACHMENT0`附加，**漫反射**（Diffuse reflectance）分量使用`GL_COLOR_ATTACHMENT1`（即`GL_COLOR_ATTACHMENT0 + 1`），依此类推。
 
-创建所有**纹理**（Texture）后，我们需要启用它们供片段**着色器**（Shader）用于渲染。这通过调用`glDrawBuffers`完成。我们只需传递包含使用的颜色附件标识符的数组（`GL_COLOR_ATTACHMENT0`到`GL_COLOR_ATTACHMENT5`）。
+创建所有纹理后，我们需要启用它们供片段着色器用于渲染。这通过调用`glDrawBuffers`完成。我们只需传递包含使用的颜色附件标识符的数组（`GL_COLOR_ATTACHMENT0`到`GL_COLOR_ATTACHMENT5`）。
 
 该类的其余部分只是getter方法和cleanup方法。
 
@@ -136,9 +136,9 @@ public class GBuffer {
 }
 ```
 
-## 几何体通道（Geometry pass）
+## 几何体通道
 
-让我们检查一下在执行几何体通道时需要应用的更改。我们将这些更改应用于`SceneRender`类和相关的**着色器**（Shader）。从`SceneRender`类开始，我们需要移除光照常量和光照**统一变量**（Uniforms），它们在此通道中不会使用（为了简化，我们也不会使用**材质**（Material）的环境颜色，我们需要移除该**统一变量**（Uniform）并移除选定实体**统一变量**（Uniform））：
+让我们检查一下在执行几何体通道时需要应用的更改。我们将这些更改应用于`SceneRender`类和相关的着色器。从`SceneRender`类开始，我们需要移除光照常量和光照**统一变量**（Uniforms），它们在此通道中不会使用（为了简化，我们也不会使用**材质**（Material）的环境颜色，我们需要移除该**统一变量**（Uniform）并移除选定实体**统一变量**（Uniform））：
 
 ```java
 public class SceneRender {
@@ -226,9 +226,9 @@ public class SceneRender {
 }
 ```
 
-您可以看到，我们现在接收一个`GBuffer`实例作为方法参数。该**缓冲区**（Buffers）是我们执行渲染的地方，因此我们首先通过调用`glBindFramebuffer`绑定该**缓冲区**（Buffers）。之后，我们清除该**缓冲区**（Buffers）并禁用混合。使用**延迟着色**（deferred rendering）时，透明对象有点棘手。方法是在光照通道中渲染它们，或者在几何体通道中丢弃它们。如您所见，我们已经移除了所有光照**统一变量**（Uniforms）设置代码。
+您可以看到，我们现在接收一个`GBuffer`实例作为方法参数。该缓冲区是我们执行渲染的地方，因此我们首先通过调用`glBindFramebuffer`绑定该缓冲区。之后，我们清除该缓冲区并禁用混合。使用**延迟着色**（deferred rendering）时，透明对象有点棘手。方法是在光照通道中渲染它们，或者在几何体通道中丢弃它们。如您所见，我们已经移除了所有光照**统一变量**（Uniforms）设置代码。
 
-顶点**着色器**（Shader）（`scene.vert`）中唯一的更改是，现在视图位置是一个四分量向量（`vec4`）：
+顶点着色器（`scene.vert`）中唯一的更改是，现在视图位置是一个四分量向量（`vec4`）：
 
 ```glsl
 #version 330
@@ -248,7 +248,7 @@ void main()
 }
 ```
 
-片段**着色器**（Shader）（`scene.frag`）已大大简化：
+片段着色器（`scene.frag`）已大大简化：
 
 ```glsl
 #version 330
@@ -313,27 +313,27 @@ layout (location = 2) out vec4 buffSpecular;
 ...
 ```
 
-这是我们引用此片段**着色器**（Shader）将写入的**纹理**（Texture）的地方。如您所见，我们只转储**漫反射**（Diffuse reflectance）颜色（可以是关联**纹理**（Texture）的颜色或**材质**（Material）的一个分量）、**镜面反射**（Specular reflectance）分量、法线以及**阴影贴图**（shadow map）的深度值。您可能会注意到我们没有在**纹理**（Texture）中存储位置，这是因为我们可以使用深度值重建片段位置。我们将在光照通道中看到如何做到这一点。
+这是我们引用此片段着色器将写入的纹理的地方。如您所见，我们只转储**漫反射**（Diffuse reflectance）颜色（可以是关联纹理的颜色或**材质**（Material）的一个分量）、**镜面反射**（Specular reflectance）分量、法线以及**阴影贴图**（shadow map）的深度值。您可能会注意到我们没有在纹理中存储位置，这是因为我们可以使用深度值重建片段位置。我们将在光照通道中看到如何做到这一点。
 
 旁注：我们简化了`Material`类的定义，移除了环境颜色分量。
 
-如果您使用OpenGL调试器（例如RenderDoc）调试示例执行，您可以查看几何体通道期间生成的**纹理**（Texture）。反照率**纹理**（Texture）将如下所示：
+如果您使用OpenGL调试器（例如RenderDoc）调试示例执行，您可以查看几何体通道期间生成的纹理。反照率纹理将如下所示：
 
 ![Albedo texture](_static/19/buffAlbedo_texture.png)
 
-保存法线值的**纹理**（Texture）将如下所示：
+保存法线值的纹理将如下所示：
 
 ![Normals texture](_static/19/buffNormal_texture.png)
 
-保存**镜面反射**（Specular reflectance）颜色值的**纹理**（Texture）将如下所示：
+保存**镜面反射**（Specular reflectance）颜色值的纹理将如下所示：
 
 ![Specular texture](_static/19/buffSpecular_texture.png)
 
-最后，深度**纹理**（Texture）将如下所示：
+最后，深度纹理将如下所示：
 
 ![Depth texture](_static/19/depth_texture.png)
 
-## 光照通道（Lighting pass）
+## 光照通道
 
 为了执行光照通道，我们将创建一个名为`LightsRender`的新类，该类如下所示：
 
@@ -376,7 +376,7 @@ public class LightsRender {
 }
 ```
 
-您可以看到，除了创建一个新的**着色器**（Shader）程序外，我们还定义了一个新的`QadMesh`类属性（尚未定义）。在分析渲染方法之前，让我们稍微思考一下如何渲染光源。我们需要使用**G-缓冲区**（G-Buffer）的内容，但为了使用它们，我们需要先渲染一些东西。但是，我们已经绘制了场景，现在我们要渲染什么？答案很简单，我们只需要渲染一个填充整个屏幕的四边形。对于该四边形的每个片段，我们将使用**G-缓冲区**（G-Buffer）中包含的数据并生成正确的输出颜色。这就是`QuadMesh`类发挥作用的地方，它只定义了一个四边形，将用于在光照通道中渲染，其定义如下：
+您可以看到，除了创建一个新的着色器程序外，我们还定义了一个新的`QadMesh`类属性（尚未定义）。在分析渲染方法之前，让我们稍微思考一下如何渲染光源。我们需要使用**G-缓冲区**（G-Buffer）的内容，但为了使用它们，我们需要先渲染一些东西。但是，我们已经绘制了场景，现在我们要渲染什么？答案很简单，我们只需要渲染一个填充整个屏幕的四边形。对于该四边形的每个片段，我们将使用**G-缓冲区**（G-Buffer）中包含的数据并生成正确的输出颜色。这就是`QuadMesh`类发挥作用的地方，它只定义了一个四边形，将用于在光照通道中渲染，其定义如下：
 
 ```java
 package org.lwjglb.engine.graph;
@@ -464,7 +464,7 @@ public class QuadMesh {
 }
 ```
 
-如您所见，我们只需要位置和**纹理坐标**（Texture Coordinates）属性（以便正确访问**G-缓冲区**（G-Buffer）**纹理**（Texture））。回到`LightsRender`类，我们需要一个创建**统一变量**（Uniforms）的方法，您将看到，它恢复了之前在`SceneRender`类中使用的光照**统一变量**（Uniforms），此外还有一组新的**统一变量**（Uniforms）用于映射**G-缓冲区**（G-Buffer）**纹理**（Texture）（`albedoSampler`、`normalSampler`、`specularSampler`和`depthSampler`）。除此之外，我们还需要新的**统一变量**（Uniforms）来从深度值计算片段位置，例如`invProjectionMatrix`和`invViewMatrix`。我们将在**着色器**（Shader）代码中看到它们如何使用。
+如您所见，我们只需要位置和**纹理坐标**（Texture Coordinates）属性（以便正确访问**G-缓冲区**（G-Buffer）纹理）。回到`LightsRender`类，我们需要一个创建**统一变量**（Uniforms）的方法，您将看到，它恢复了之前在`SceneRender`类中使用的光照**统一变量**（Uniforms），此外还有一组新的**统一变量**（Uniforms）用于映射**G-缓冲区**（G-Buffer）纹理（`albedoSampler`、`normalSampler`、`specularSampler`和`depthSampler`）。除此之外，我们还需要新的**统一变量**（Uniforms）来从深度值计算片段位置，例如`invProjectionMatrix`和`invViewMatrix`。我们将在着色器代码中看到它们如何使用。
 
 ```java
 public class LightsRender {
@@ -570,9 +570,9 @@ public class LightsRender {
 }
 ```
 
-更新光源后，我们激活保存几何体通道结果的**纹理**（Texture）。之后，我们设置雾和级联阴影**统一变量**（Uniforms）并只绘制一个四边形。
+更新光源后，我们激活保存几何体通道结果的纹理。之后，我们设置雾和级联阴影**统一变量**（Uniforms）并只绘制一个四边形。
 
-那么，光照通道的顶点**着色器**（Shader）是什么样的呢（`lights.vert`）？
+那么，光照通道的顶点着色器是什么样的呢（`lights.vert`）？
 
 ```glsl
 #version 330
@@ -589,7 +589,7 @@ void main()
 }
 ```
 
-上面的代码只是直接转储顶点并将**纹理坐标**（Texture Coordinates）传递给片段**着色器**（Shader）。片段**着色器**（Shader）（`lights.frag`）定义如下：
+上面的代码只是直接转储顶点并将**纹理坐标**（Texture Coordinates）传递给片段着色器。片段着色器（`lights.frag`）定义如下：
 
 ```glsl
 #version 330
@@ -805,7 +805,7 @@ void main()
 }
 ```
 
-如您所见，它包含您应该熟悉的功能。它们在前面的章节中用于场景片段**着色器**（Shader）。这里需要注意的重要事项是以下几行：
+如您所见，它包含您应该熟悉的功能。它们在前面的章节中用于场景片段着色器。这里需要注意的重要事项是以下几行：
 
 ```glsl
 uniform sampler2D albedoSampler;
@@ -816,7 +816,7 @@ uniform sampler2D depthSampler;
 
 我们首先根据当前片段坐标采样反照率、法线贴图（从[0, -1]转换为[-1, 1]范围）和**镜面反射**（Specular reflectance）附件。除此之外，还有一段您可能觉得新的代码片段。我们需要片段位置来执行光照计算。但是，我们没有位置附件。这就是深度附件和逆投影矩阵发挥作用的地方。有了这些信息，我们可以重建世界位置（视图空间坐标），而无需另一个存储位置的附件。您将在其他教程中看到，它们为位置设置了特定的附件，但这样做效率更高。请始终记住，延迟附件消耗的内存越少越好。有了所有这些信息，我们只需简单地遍历光源来计算光对最终颜色的贡献。
 
-其余代码与场景渲染的片段**着色器**（Shader）中的代码非常相似。
+其余代码与场景渲染的片段着色器中的代码非常相似。
 
 最后，我们需要更新`Render`类以使用新类：
 

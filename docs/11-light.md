@@ -33,7 +33,7 @@ $$L = A + D + S$$
 
 我们还可以为相同的材质指定不同的颜色，分别用于环境光、漫反射和镜面反射分量。因此，这些分量将受到与材质相关联的颜色所调制。如果材质有纹理，我们将简单地为每个分量使用单一纹理。
 
-所以，对于没有纹理的材质，最终颜色将是：$$L = A * \text{ambientColour} + D * \text{diffuseColour} + S * \text{specularColour}$$
+所以，对于没有纹理的材质，最终颜色将是：$L = A * \text{ambientColour} + D * \text{diffuseColour} + S * \text{specularColour}$
 
 而对于有纹理的材质，最终颜色将是：
 
@@ -87,11 +87,11 @@ $$L = A * \text{textureColour} + D * \text{textureColour} + S * \text{textureCol
 
 让我们总结一下如何计算它。我们定义以下变量：
 
-*   $$vPos$$: 我们的顶点在模型视图空间坐标系中的位置。
-*   $$lPos$$: 光源在视图空间坐标系中的位置。
-*   $$intensity$$: 光的强度（从0到1）。
-*   $$lColour$$: 光的颜色。
-*   $$normal$$: 顶点法线。
+*   $vPos$: 我们的顶点在模型视图空间坐标系中的位置。
+*   $lPos$: 光源在视图空间坐标系中的位置。
+*   $intensity$: 光的强度（从0到1）。
+*   $lColour$: 光的颜色。
+*   $normal$: 顶点法线。
 
 首先，我们需要计算从当前位置指向光源的向量：$toLightDirection = lPos - vPos$。该运算的结果需要被归一化。
 
@@ -688,33 +688,52 @@ public class Mesh {
 
 现在是时候在渲染时使用光照了，让我们从着色器开始，特别是顶点着色器（`scene.vert`）：
 
-```glsl
-#version 330
+=== "本章的顶点着色器"
+    ```glsl
+    #version 330
+    
+    layout (location=0) in vec3 position;   // 顶点位置，属性位置0
+    layout (location=1) in vec3 normal;     // 顶点法线，属性位置1
+    layout (location=2) in vec2 texCoord;   // 纹理坐标，属性位置2
+    
+    out vec3 outPosition;  // 输出到片段着色器的顶点位置（视图空间）
+    out vec3 outNormal;    // 输出到片段着色器的法线（视图空间）
+    out vec2 outTextCoord; // 输出到片段着色器的纹理坐标
+    
+    uniform mat4 projectionMatrix; // 投影矩阵
+    uniform mat4 viewMatrix;       // 视图矩阵
+    uniform mat4 modelMatrix;      // 模型矩阵
+    
+    void main()
+    {
+        mat4 modelViewMatrix = viewMatrix * modelMatrix; // 模型视图矩阵
+        vec4 mvPosition =  modelViewMatrix * vec4(position, 1.0); // 转换到视图空间的位置
+        gl_Position = projectionMatrix * mvPosition; // 最终裁剪空间位置
+        outPosition = mvPosition.xyz; // 将视图空间位置传递给片段着色器
+        // 将法线转换到视图空间，并进行归一化。注意w分量为0，以避免平移影响
+        outNormal = normalize(transpose(inverse(modelViewMatrix)) * vec4(normal, 0.0)).xyz; // 正确的法线变换
+        // 原文的 outNormal = normalize(modelViewMatrix * vec4(normal, 0.0)).xyz; 仅在modelViewMatrix只包含旋转和均匀缩放时正确
+        outTextCoord = texCoord; // 传递纹理坐标
+    }
+    ```
 
-layout (location=0) in vec3 position;   // 顶点位置，属性位置0
-layout (location=1) in vec3 normal;     // 顶点法线，属性位置1
-layout (location=2) in vec2 texCoord;   // 纹理坐标，属性位置2
-
-out vec3 outPosition;  // 输出到片段着色器的顶点位置（视图空间）
-out vec3 outNormal;    // 输出到片段着色器的法线（视图空间）
-out vec2 outTextCoord; // 输出到片段着色器的纹理坐标
-
-uniform mat4 projectionMatrix; // 投影矩阵
-uniform mat4 viewMatrix;       // 视图矩阵
-uniform mat4 modelMatrix;      // 模型矩阵
-
-void main()
-{
-    mat4 modelViewMatrix = viewMatrix * modelMatrix; // 模型视图矩阵
-    vec4 mvPosition =  modelViewMatrix * vec4(position, 1.0); // 转换到视图空间的位置
-    gl_Position = projectionMatrix * mvPosition; // 最终裁剪空间位置
-    outPosition = mvPosition.xyz; // 将视图空间位置传递给片段着色器
-    // 将法线转换到视图空间，并进行归一化。注意w分量为0，以避免平移影响
-    outNormal = normalize(transpose(inverse(modelViewMatrix)) * vec4(normal, 0.0)).xyz; // 正确的法线变换
-    // 原文的 outNormal = normalize(modelViewMatrix * vec4(normal, 0.0)).xyz; 仅在modelViewMatrix只包含旋转和均匀缩放时正确
-    outTextCoord = texCoord; // 传递纹理坐标
-}
-```
+=== "先前的顶点着色器"
+    #version 330
+    
+    layout (location=0) in vec3 position;
+    layout (location=1) in vec2 texCoord;
+    
+    out vec2 outTextCoord;
+    
+    uniform mat4 projectionMatrix;
+    uniform mat4 viewMatrix;
+    uniform mat4 modelMatrix;
+    
+    void main()
+    {
+    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+    outTextCoord = texCoord;
+    }
 
 如你所见，我们现在将法线数据作为另一个输入属性，并仅将该数据传递给片段着色器。在我们继续讨论片段着色器之前，有一个非常重要的概念必须强调。从上面的代码中你可以看到，`mvVertexNormal`（应为 `outNormal`）这个包含顶点法线的变量，被转换到了模型视图空间坐标系。这是通过将 `normal` 乘以 `modelViewMatrix`（对于法线，通常是模型视图矩阵的逆转置矩阵）来完成的，就像处理顶点位置一样。但有一个细微的区别，在乘以矩阵之前，该顶点法线的w分量被设置为0：`vec4(vertexNormal, 0.0)`（这里指`normal`）。我们为什么要这样做呢？因为我们希望法线被旋转和缩放，但我们不希望它被平移，我们只关心它的方向而不是它的位置。通过将其w分量设置为0可以实现这一点，这也是使用齐次坐标的优点之一，通过设置w分量我们可以控制应用哪些变换。你可以手动进行矩阵乘法运算，看看为什么会这样。（译者注：对于法线的正确变换，应使用模型视图矩阵的逆转置矩阵，`transpose(inverse(modelViewMatrix))`，以处理非均匀缩放。如果模型视图矩阵只包含旋转和均匀缩放，则直接乘以模型视图矩阵（或其左上3x3部分）在方向上是可行的，但仍需归一化。）
 

@@ -4,7 +4,7 @@
 
 您可以在[这里](https://github.com/lwjglgamedev/lwjglbook/tree/main/chapter-12)找到本章的完整源代码。
 
-## 天空盒（Sky Box）
+## 天空盒
 
 下图描绘了天空盒的概念。
 
