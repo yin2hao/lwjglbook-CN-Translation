@@ -33,7 +33,9 @@ $$L = A + D + S$$
 
 我们还可以为相同的材质指定不同的颜色，分别用于环境光、漫反射和镜面反射分量。因此，这些分量将受到与材质相关联的颜色所调制。如果材质有纹理，我们将简单地为每个分量使用单一纹理。
 
-所以，对于没有纹理的材质，最终颜色将是：$L = A * \text{ambientColour} + D * \text{diffuseColour} + S * \text{specularColour}$
+所以，对于没有纹理的材质，最终颜色将是：
+
+$$L = A * \text{ambientColour} + D * \text{diffuseColour} + S * \text{specularColour}$$
 
 而对于有纹理的材质，最终颜色将是：
 
@@ -131,9 +133,10 @@ $$color = diffuseColour * lColour * diffuseFactor * intensity$$
 
 我们还需要考虑到，如果相机正对着反射光的锥形区域，这种光应该更强烈。这将通过将 $specularFactor$ 提升到一个名为 $specularPower$ 的参数的幂来实现。
 
-$$specularFactor = specularFactor^{specularPower}$$。
+$$specularFactor = specularFactor^{specularPower}$$
 
-最后，我们需要模拟材质的反射率（reflectivity），它也将调制反射光的强度。这将通过另一个名为 reflectance 的参数来完成。所以镜面反射分量的颜色将是：$specularColour * lColour * reflectance * specularFactor * intensity$。
+最后，我们需要模拟材质的反射率（reflectivity），它也将调制反射光的强度。这将通过另一个名为 reflectance 的参数来完成。所以镜面反射分量的颜色将是：
+$$specularColour * lColour * reflectance * specularFactor * intensity$$
 
 ## 衰减
 

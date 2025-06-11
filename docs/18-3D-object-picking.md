@@ -20,7 +20,7 @@
 
 ## 代码准备
 
-我们将首先计算我们加载的模型的每个网格的**包围盒**（bounding box）。我们将通过在加载模型时添加一个额外的标志`aiProcess_GenBoundingBoxes`来让**Assimp**（Assimp）为我们完成这项工作。此标志将自动为每个网格计算一个**包围盒**（bounding box）。该盒子将嵌入所有网格并将与轴对齐。您可能会看到缩写词“AABB”用于此，它表示**轴对齐包围盒**（Axis Aligned Bounding Box）。为什么是轴对齐的盒子？因为它将大大简化交集计算。通过使用该标志，**Assimp**（Assimp）将执行这些计算，这些计算将作为**包围盒**（bounding box）的角点（具有最小和最大坐标）可用。下图显示了立方体的外观。
+我们将首先计算我们加载的模型的每个网格的**包围盒**（bounding box）。我们将通过在加载模型时添加一个额外的标志`aiProcess_GenBoundingBoxes`来让Assimp为我们完成这项工作。此标志将自动为每个网格计算一个**包围盒**（bounding box）。该盒子将嵌入所有网格并将与轴对齐。您可能会看到缩写词“AABB”用于此，它表示**轴对齐包围盒**（Axis Aligned Bounding Box）。为什么是轴对齐的盒子？因为它将大大简化交集计算。通过使用该标志，Assimp将执行这些计算，这些计算将作为**包围盒**（bounding box）的角点（具有最小和最大坐标）可用。下图显示了立方体的外观。
 
 ![AABB](_static/18/aabb.svg)
 
@@ -326,7 +326,7 @@ public class Main implements IAppLogic {
 
 此方法实现了测试**轴对齐包围盒**（Axis Aligned Boxes）交集的算法。您可以在[此处](http://people.csail.mit.edu/amy/papers/box-jgt.pdf "here")查看详细信息，如JOML文档中所述。
 
-该方法测试由原点和方向定义的光线是否与由最小和最大角点定义的盒子相交。如前所述，此算法是有效的，因为我们的立方体与轴对齐，如果它们旋转了，此方法将不起作用。此外，在有动画时，您可能需要为每个动画帧设置不同的**包围盒**（bounding box）（**Assimp**（Assimp）计算绑定姿势的**包围盒**（bounding box））。```intersectRayAab```方法接收以下参数：
+该方法测试由原点和方向定义的光线是否与由最小和最大角点定义的盒子相交。如前所述，此算法是有效的，因为我们的立方体与轴对齐，如果它们旋转了，此方法将不起作用。此外，在有动画时，您可能需要为每个动画帧设置不同的**包围盒**（bounding box）（Assimp计算绑定姿势的**包围盒**（bounding box））。```intersectRayAab```方法接收以下参数：
 
 * 原点：在我们的例子中，这将是我们的相机位置。
 * 方向：这是指向鼠标坐标的光线（世界空间）。

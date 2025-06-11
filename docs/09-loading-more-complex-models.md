@@ -1,6 +1,6 @@
 # 第09章 - 加载复杂模型：Assimp（Loading more complex models: Assimp）
 
-为了开发游戏，能够加载不同格式的复杂3D模型至关重要。为某些格式编写解析器需要大量工作，即使仅支持单一格式也可能耗时。幸运的是，[**Assimp**](http://assimp.sourceforge.net/)库已可用于解析多种常见3D格式。这是一个C/C++库，能加载多种格式的静态和动态模型。轻量级Java游戏库提供了从Java代码调用的绑定。本章将介绍其使用方法。
+为了开发游戏，能够加载不同格式的复杂3D模型至关重要。为某些格式编写解析器需要大量工作，即使仅支持单一格式也可能耗时。幸运的是，[**Assimp库**](http://assimp.sourceforge.net/)已可用于解析多种常见3D格式。这是一个C/C++库，能加载多种格式的静态和动态模型。轻量级Java游戏库提供了从Java代码调用的绑定。本章将介绍其使用方法。
 
 本章完整源代码可在[此处](https://github.com/lwjglgamedev/lwjglbook/tree/main/chapter-09)找到。
 
