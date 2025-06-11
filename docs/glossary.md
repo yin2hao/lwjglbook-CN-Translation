@@ -41,4 +41,5 @@
 41. **透视投影矩阵**（Perspective Projection Matrix）
 42. **级联阴影贴图**（Cascaded Shadow Maps）
 43. **归一化设备坐标**，Normalized Device Coordinates）
-44. （章节18完成）
+44. **包围盒**（bounding box）
+45. **轴对齐包围盒**（Axis Aligned Bounding Box）
