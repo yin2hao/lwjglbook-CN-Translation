@@ -1,5 +1,5 @@
 nav:
-  - 事前准备: 01-first-steps.md
+  - 初探: 01-first-steps.md
   - 游戏循环: 02-the-game-loop.md
   - 我们的第一个三角形: 03-our-first-triangle.md
   - 渲染一个四边形: 04-Render-a-quad.md
