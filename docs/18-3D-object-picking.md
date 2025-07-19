@@ -63,13 +63,10 @@ public class Mesh {
                 new Vector3f(), new Vector3f());
     }
 
-    public Mesh(float[] positions, float[] normals, float[] tangents, float[] bitangents, float[] textCoords, int[] indices,
-                int[] boneIndices, float[] weights, Vector3f aabbMin, Vector3f aabbMax) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            this.aabbMin = aabbMin;
-            this.aabbMax = aabbMax;
-            ...
-        }        
+    public Mesh(float[] positions, float[] normals, float[] tangents, float[] bitangents, float[] textCoords, int[] indices, int[] boneIndices, float[] weights, Vector3f aabbMin, Vector3f aabbMax) {
+        this.aabbMin = aabbMin;
+        this.aabbMax = aabbMax;
+        ...
     }
     ...
     public Vector3f getAabbMax() {
@@ -317,6 +314,7 @@ public class Main implements IAppLogic {
                 modelMatrix.identity();
             }
         }
+        scene.setSelectedEntity(selectedEntity);
     }
     ...
 }
@@ -385,6 +383,6 @@ public class Main implements IAppLogic {
 
 您将能够看到当用鼠标点击时，立方体如何以蓝色渲染：
 
-<!-- ![Selected cube](_static/18/screenshot.png) -->
+![Selected cube](_static/18/screenshot.png)
 
 [下一章](./19-deferred-shading.md)

@@ -140,7 +140,25 @@ public class SkyBoxRender {
 }
 ```
 
-下一步是为天空盒创建一个新的渲染方法，该方法将在全局渲染方法中调用。
+方法`createUniforms` 像这样定义:
+
+``` java
+public class SkyBoxRender {
+    ...
+    private void createUniforms() {
+        uniformsMap = new UniformsMap(shaderProgram.getProgramId());
+        uniformsMap.createUniform("projectionMatrix");
+        uniformsMap.createUniform("viewMatrix");
+        uniformsMap.createUniform("modelMatrix");
+        uniformsMap.createUniform("diffuse");
+        uniformsMap.createUniform("txtSampler");
+        uniformsMap.createUniform("hasTexture");
+    }
+    ...
+}
+```
+
+我们可以创建一些Uniform变量来保存渲染时所需的数据。下一步是为天空盒创建一个新的渲染方法，该方法将在全局渲染方法中被调用。
 
 ```java
 public class SkyBoxRender {
@@ -187,6 +205,19 @@ public class SkyBoxRender {
 ```
 
 您将看到我们在将数据加载到关联的统一变量之前修改了视图矩阵。请记住，当我们移动相机时，我们实际上是在移动整个世界。因此，如果我们只是按原样乘以视图矩阵，当相机移动时，天空盒也会被位移。但我们不希望这样，我们希望将其固定在原点坐标（0, 0, 0）处。这通过将包含平移增量的视图矩阵部分（`m30`、`m31`和`m32`分量）设置为0来实现。您可能会认为您可以完全避免使用视图矩阵，因为天空盒必须固定在原点。在这种情况下，您会看到天空盒不会随相机旋转，这不是我们想要的。我们需要它旋转但不平移。要渲染天空盒，我们只需设置统一变量并渲染与天空盒关联的立方体。
+
+最后，我们定义一个 `cleanup` 方法来正确释放资源。
+
+```java
+public class SkyBoxRender {
+    ...
+    public void cleanup() {
+        shaderProgram.cleanup();
+    }
+    ...
+}
+```
+
 
 在`Render`类中，我们只需要实例化`SkyBoxRender`类并调用渲染方法：
 

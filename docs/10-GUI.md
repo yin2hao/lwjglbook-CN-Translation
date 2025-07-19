@@ -538,7 +538,7 @@ public class Engine {
 ```java
 public interface IAppLogic {
     ...
-    void update(Window window, Scene scene, long diffTimeMillis);
+    void input(Window window, Scene scene, long diffTimeMillis, boolean inputConsumed);
     ...
 }
 ```
