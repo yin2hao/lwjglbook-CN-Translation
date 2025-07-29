@@ -2,7 +2,8 @@
 ![](https://img.shields.io/badge/license-CC--BY--SA--4.0-green)
 ![](https://img.shields.io/github/stars/yin2hao/lwjglbook-CN-Translation)
 
-暂未完成纠错，不建议阅读
+~~暂未完成纠错，不建议阅读~~
+已删除
 
 本书英文原文[GitHub](https://github.com/lwjglgamedev/lwjglbook-bookcontents)(以下称为原文)
 
